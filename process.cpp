@@ -1,4 +1,4 @@
-﻿#include "process.h"
+#include "process.h"
 
 #include <windows.h>
 #include <WinBase.h>
@@ -55,7 +55,6 @@ int Process::run(){
         case EXIT_PROCESS_DEBUG_EVENT:
             exitCode = debug_event.u.ExitProcess.dwExitCode;
             run = false;
-            continue;
             break;
         default:
             break;
