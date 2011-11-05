@@ -1,35 +1,36 @@
 #include "process.h"
 
 #include <windows.h>
-#include <WinBase.h>
-#include <atlstr.h>
+#include <winbase.h>
 #include <iostream>
 
 #include <stdlib.h>
-#include "atlbase.h"
-#include "atlstr.h"
-#include "comutil.h"
 
 using namespace libvsd;
 
 Process::Process(wchar_t *program,wchar_t * arguments):
 m_readyAnsi(NULL),
-    m_readyUTF8(NULL)
+    m_readyUTF8(NULL),
+    m_arguments(NULL)
 {
     m_program = new wchar_t[wcslen(program)];
     wcscpy(m_program,program);
+
+
     m_arguments = new wchar_t[wcslen(arguments)];
     wcscpy(m_arguments,arguments);
 
 
-    ZeroMemory( &m_si, sizeof(m_si) ); 
-    m_si.cb = sizeof(m_si); 
-    ZeroMemory( &m_pi, sizeof(m_pi) );
-
-    
     std::wcout<<m_program<<m_arguments<<std::endl;
 
+    ZeroMemory( &m_si, sizeof(m_si) ); 
+    m_si.cb = sizeof(m_si); 
+    m_si.dwFlags |= STARTF_USESTDHANDLES;
+    m_si.hStdOutput= m_si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    ZeroMemory( &m_pi, sizeof(m_pi) );
 }
+
 
 Process::~Process(){
     //delete [] m_program;
@@ -38,12 +39,14 @@ Process::~Process(){
 
 int Process::run(){
 
-    if(!CreateProcess ( m_program, m_arguments, NULL, NULL, FALSE, DEBUG_ONLY_THIS_PROCESS, NULL,NULL,&m_si, &m_pi )){
+    if(!CreateProcess ( m_program, m_arguments, NULL, NULL, TRUE, DEBUG_ONLY_THIS_PROCESS, NULL,NULL,&m_si, &m_pi )){
         return -1;
     }
+
     DEBUG_EVENT debug_event = {0};
     unsigned long exitCode = 0;
     bool run = true;
+
     while(run)
     {
         if (!WaitForDebugEvent(&debug_event, INFINITE))
