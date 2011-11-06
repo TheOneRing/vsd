@@ -8,6 +8,38 @@
 
 using namespace libvsd;
 
+struct Pipe
+{
+    Pipe()
+        : hWrite(INVALID_HANDLE_VALUE)
+        , hRead(INVALID_HANDLE_VALUE)
+    {}
+
+    ~Pipe()
+    {
+        if (hWrite != INVALID_HANDLE_VALUE)
+            CloseHandle(hWrite);
+        if (hRead != INVALID_HANDLE_VALUE)
+            CloseHandle(hRead);
+    }
+
+    HANDLE hWrite;
+    HANDLE hRead;
+};
+
+static bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
+{
+    if (!CreatePipe(&pipe.hRead, &pipe.hWrite, sa, 0)) {
+//         qWarning("CreatePipe failed with error code %d.", GetLastError());
+        return false;
+    }
+    if (!SetHandleInformation(pipe.hRead, HANDLE_FLAG_INHERIT, 0)) {
+//         qWarning("SetHandleInformation failed with error code %d.", GetLastError());
+        return false;
+    }
+    return true;
+}
+
 Process::Process(wchar_t *program,wchar_t * arguments):
 m_readyAnsi(NULL),
     m_readyUTF8(NULL),
@@ -22,11 +54,24 @@ m_readyAnsi(NULL),
 
 
     std::wcout<<m_program<<m_arguments<<std::endl;
+    
+    SECURITY_ATTRIBUTES sa = {0};
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+    Pipe p;
 
-    ZeroMemory( &m_si, sizeof(m_si) ); 
+    if (!setupPipe(p, &sa))
+//     qFatal("Cannot setup pipe for stdout.");
+
+    // Let the child process write to the same handle, like QProcess::MergedChannels.
+    DuplicateHandle(GetCurrentProcess(), p.hWrite, GetCurrentProcess(),
+                    &p.hWrite, 0, TRUE, DUPLICATE_SAME_ACCESS);
+    
+     ZeroMemory( &m_si, sizeof(m_si) );
     m_si.cb = sizeof(m_si); 
     m_si.dwFlags |= STARTF_USESTDHANDLES;
-    m_si.hStdOutput= m_si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+     m_si.hStdOutput = p.hWrite;
+     m_si.hStdError = p.hWrite;
 
     ZeroMemory( &m_pi, sizeof(m_pi) );
 }
