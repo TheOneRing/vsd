@@ -1,54 +1,109 @@
 
 #include <windows.h>
 #include <iostream>
+#include <fstream>
 #include <tchar.h>
 #include "process.h"
 
+#ifndef _MSC_VER
+#include <ext/stdio_filebuf.h>
+#endif
+
 using namespace libvsd;
 
-void readyReadANSI(char * c){
-    std::cout<<c;
+
+
+
+
+std::wostream *open_ofstream(wchar_t* name, const std::ios_base::openmode  mode)
+{
+#ifndef _MSC_VER
+	std::wcout<<L"opening file"<<name<<std::endl;
+	FILE* c_file = _wfopen( name, L"w+" );
+	__gnu_cxx::stdio_filebuf<wchar_t>* buffer = new __gnu_cxx::stdio_filebuf<wchar_t>( c_file, mode, 1 );
+
+	return new std::wostream(buffer);
+#else
+	return new std::wofstream(name,mode);
+#endif
 }
 
-void readyReadUTF8(wchar_t *w){
-    std::wcout<<w;
+
+
+static std::wostream *_log = NULL;
+
+void writeANSI(char * c){
+	int len = MultiByteToWideChar(CP_ACP, 0, c, -1, NULL,NULL);
+	wchar_t* buf = new wchar_t[len];
+	MultiByteToWideChar(CP_UTF8, 0, c, -1, buf, len);
+	writeUTF8(buf);
+	delete [] buf;
 }
 
+void writeUTF8(wchar_t *w){
+	std::wcout<<w;
+	if(_log)
+		*_log<<w;
+}
+
+wchar_t *quotate(wchar_t *in){
+	wchar_t *out =  new wchar_t[wcslen(in)+2];
+	wcscpy(out,L"\"");
+	wcscpy(out+1,in);
+	wcscpy(out+1+wcslen(in),L"\"");
+	return out;
+}
 void initArgs(wchar_t *out, wchar_t *in[],int len){
-    for(int i=2;i<len;++i){
-        wcscpy(out,_T(" \""));
-        out+=2;
-        wcscpy(out,in[i]);
-        out += wcslen(in[i]);
-        wcscpy(out++,_T("\""));
-    }
-    wcscpy(out++,_T("\0"));
+	for(int i=2;i<len;++i){
+		if(wcscmp(in[i],L"--log")==0){
+			if(i+1<=len){
+				i++;
+				_log = open_ofstream(in[i++], std::ios::app); 
+			}else
+			{
+				std::wcout<<"Error to few arguments"<<std::endl;
+			}
+			continue;
+		}
+
+		wchar_t *tmp = quotate(in[i]);
+		wcscpy(out++,L" ");
+		wcscpy(out,tmp);
+		out += wcslen(tmp);
+		delete []tmp;
+	}
+	wcscpy(out++,L"\0");
 }
 
 int main()
 {
-    int argc;
-    wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+	int argc;
+	wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 
-    if(argc<2)
-        return -1;
-    wchar_t  *program = argv[1];
-    wchar_t  *arguments = new wchar_t[MAX_PATH *2];
-    initArgs(arguments,argv,argc);
+	if(argc<2)
+		return -1;
+	wchar_t  *program = argv[1];
+	wchar_t  *arguments = new wchar_t[MAX_PATH *2];
+	initArgs(arguments,argv,argc);
 
-    Process p(program,arguments);
-    delete [] arguments;
-
-
-    p.setANSICallback(readyReadANSI);
-    p.setUTF8Callback(readyReadUTF8);
-
-    unsigned long exitCode = p.run();
-    char buf[20];
-    ltoa(exitCode,buf,10);
-    std::wcout<<p.program()<<p.arguments()<<_T(" Exited with status: ")<<buf<<std::endl;
+	Process p(program,arguments);
+	delete [] arguments;
 
 
-    return exitCode;
+	p.setANSICallback(writeANSI);
+	p.setUTF8Callback(writeUTF8);
+
+
+
+
+	unsigned long exitCode = p.run();
+	char buf[20];
+	ltoa(exitCode,buf,10);
+	std::wcout<<p.program()<<p.arguments()<<L" Exited with status: "<<buf<<std::endl;
+
+	if(_log){
+		_log->flush();
+	}
+	return exitCode;
 }
 

@@ -58,20 +58,21 @@ m_readyAnsi(NULL),
     SECURITY_ATTRIBUTES sa = {0};
     sa.nLength = sizeof(sa);
     sa.bInheritHandle = TRUE;
-    Pipe p;
+    Pipe sout;
+    Pipe serr;
 
-    if (!setupPipe(p, &sa))
-//     qFatal("Cannot setup pipe for stdout.");
+    if (!setupPipe(sout, &sa))
+//     qFatal("Cannot setup pipe for sout.");
 
     // Let the child process write to the same handle, like QProcess::MergedChannels.
-    DuplicateHandle(GetCurrentProcess(), p.hWrite, GetCurrentProcess(),
-                    &p.hWrite, 0, TRUE, DUPLICATE_SAME_ACCESS);
+    DuplicateHandle(GetCurrentProcess(),sout.hWrite, GetCurrentProcess(),
+                    &serr.hWrite, 0, TRUE, DUPLICATE_SAME_ACCESS);
     
      ZeroMemory( &m_si, sizeof(m_si) );
     m_si.cb = sizeof(m_si); 
     m_si.dwFlags |= STARTF_USESTDHANDLES;
-     m_si.hStdOutput = p.hWrite;
-     m_si.hStdError = p.hWrite;
+     m_si.hStdOutput = sout.hWrite;
+     m_si.hStdError = serr.hWrite;
 
     ZeroMemory( &m_pi, sizeof(m_pi) );
 }
