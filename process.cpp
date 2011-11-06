@@ -68,6 +68,7 @@ m_readyAnsi(NULL),
     DuplicateHandle(GetCurrentProcess(),sout.hWrite, GetCurrentProcess(),
                     &serr.hWrite, 0, TRUE, DUPLICATE_SAME_ACCESS);
     
+     m_stdOut = GetStdHandle(STD_OUTPUT_HANDLE);
      ZeroMemory( &m_si, sizeof(m_si) );
     m_si.cb = sizeof(m_si); 
     m_si.dwFlags |= STARTF_USESTDHANDLES;
@@ -92,9 +93,16 @@ int Process::run(){
     DEBUG_EVENT debug_event = {0};
     unsigned long exitCode = 0;
     bool run = true;
+    DWORD dwRead, dwWritten;
+    const size_t buflen = 4096;
+    char chBuf[buflen];
+     BOOL bSuccess = FALSE;
 
     while(run)
     {
+        bSuccess = ReadFile(m_si.hStdError, chBuf, buflen, &dwRead, NULL);
+         if(bSuccess || !dwRead == 0)
+             WriteFile(m_stdOut, chBuf, dwRead, &dwWritten, NULL);
         if (!WaitForDebugEvent(&debug_event, INFINITE))
             return -1;
         switch(debug_event.dwDebugEventCode){

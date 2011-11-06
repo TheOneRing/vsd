@@ -36,6 +36,7 @@ namespace libvsd {
         wchar_t *m_program;
         wchar_t *m_arguments;
 
+        HANDLE m_stdOut;
         STARTUPINFO m_si; 
         PROCESS_INFORMATION m_pi; 
 
