@@ -19,8 +19,8 @@ std::wostream *open_ofstream(wchar_t* name, const std::ios_base::openmode  mode)
 {
 #ifndef _MSC_VER
 	std::wcout<<L"opening file"<<name<<std::endl;
-	FILE* c_file = _wfopen( name, L"w+" );
-	__gnu_cxx::stdio_filebuf<wchar_t>* buffer = new __gnu_cxx::stdio_filebuf<wchar_t>( c_file, mode, 1 );
+	FILE* c_file = _wfopen( name, L"w,ccs=UNICODE" );
+	__gnu_cxx::stdio_filebuf<wchar_t>* buffer = new __gnu_cxx::stdio_filebuf<wchar_t>( c_file, std::ios::out, 1 );
 
 	return new std::wostream(buffer);
 #else
@@ -32,6 +32,16 @@ std::wostream *open_ofstream(wchar_t* name, const std::ios_base::openmode  mode)
 
 static std::wostream *_log = NULL;
 
+void writeUTF8(wchar_t *w){
+	std::wcout<<w;
+	if(_log)
+		*_log<<w;
+	else
+	{
+		std::wcout<<L"LOG is null"<<std::endl;
+	}
+}
+
 void writeANSI(char * c){
 	int len = MultiByteToWideChar(CP_ACP, 0, c, -1, NULL,NULL);
 	wchar_t* buf = new wchar_t[len];
@@ -40,11 +50,7 @@ void writeANSI(char * c){
 	delete [] buf;
 }
 
-void writeUTF8(wchar_t *w){
-	std::wcout<<w;
-	if(_log)
-		*_log<<w;
-}
+
 
 wchar_t *quotate(wchar_t *in){
 	wchar_t *out =  new wchar_t[wcslen(in)+2];
