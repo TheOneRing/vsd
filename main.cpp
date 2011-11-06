@@ -25,8 +25,11 @@ void initArgs(wchar_t *out, wchar_t *in[],int len){
     wcscpy(out++,_T("\0"));
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+int main()
 {
+    int argc;
+    wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+
     if(argc<2)
         return -1;
     wchar_t  *program = argv[1];
