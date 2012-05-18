@@ -40,16 +40,11 @@ static bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
 	return true;
 }
 
-Process::Process(wchar_t *program,wchar_t * arguments):
-	m_readyUTF8(NULL),
-	m_arguments(NULL)
+Process::Process(wchar_t *program,wchar_t * arguments,readyReadUTF8 *utf8)
+	:m_readyUTF8(utf8)
+	,m_program(SysAllocString(program))
+	,m_arguments(SysAllocString(arguments))
 {
-	m_program = SysAllocString(program);
-
-
-	m_arguments = SysAllocString(arguments);
-
-
 	std::wcout<<m_program<<m_arguments<<std::endl;
 
 	SECURITY_ATTRIBUTES sa = {0};
@@ -94,14 +89,16 @@ int Process::run(){
 	bool run = true;
 	DWORD dwRead, dwWritten;
 	const size_t buflen = 4096;
-	char chBuf[buflen];
+	wchar_t chBuf[buflen];
 	BOOL bSuccess = FALSE;
 
 	while(run)
 	{
 		bSuccess = ReadFile(m_si.hStdError, chBuf, buflen, &dwRead, NULL);
-		if(bSuccess || !dwRead == 0)
-			WriteFile(m_stdOut, chBuf, dwRead, &dwWritten, NULL);
+		if(bSuccess || dwRead != 0){
+			wchar_t * msg = SysAllocString(chBuf);
+			m_readyUTF8(msg);
+		}
 		if (!WaitForDebugEvent(&debug_event, INFINITE))
 			return -1;
 		switch(debug_event.dwDebugEventCode){
@@ -159,8 +156,5 @@ wchar_t *Process::arguments(){
 }
 
 
-void Process::setUTF8Callback(readyReadUTF8 *utf8){
-	m_readyUTF8 = utf8;
-}
 
 

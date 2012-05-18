@@ -46,7 +46,7 @@ void writeUTF8(wchar_t *w){
 void initArgs(wchar_t *out, wchar_t *in[],int len){
 	wcscpy(out,L"\0");
 	for(int i=2;i<len;++i){
-		if(wcscmp(in[i],L"--log")==0){
+		if(wcscmp(in[i],L"--vsdlog")==0){
 			if(i+1<=len){
 				i++;
 				_log = open_ofstream(in[i++], std::ios::app); 
@@ -71,14 +71,8 @@ int _tmain(int argc,wchar_t *argv[])
 	wchar_t  *arguments = new wchar_t[MAX_PATH *2];
 	initArgs(arguments,argv,argc);
 
-	Process p(program,arguments);
+	Process p(program,arguments,writeUTF8);
 	delete [] arguments;
-
-
-	p.setUTF8Callback(writeUTF8);
-
-
-
 
 	unsigned long exitCode = p.run();
 	char buf[20];

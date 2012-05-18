@@ -17,10 +17,9 @@ namespace libvsd {
     class LIBVSD_EXPORT Process
     {
     public:
-        typedef void readyReadANSI(char *data);
         typedef void readyReadUTF8(wchar_t *data);
 
-        Process(wchar_t *program,wchar_t * arguments);
+        Process(wchar_t *program,wchar_t * arguments,readyReadUTF8 *utf8);
         ~Process();
 
         int run();
