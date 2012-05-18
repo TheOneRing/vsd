@@ -3,15 +3,14 @@
 #include <iostream>
 #include <fstream>
 #include <tchar.h>
-#include "process.h"
+
+#include "vsdprocess.h"
 
 #ifndef _MSC_VER
 #include <ext/stdio_filebuf.h>
 #endif
 
 using namespace libvsd;
-
-
 
 
 
@@ -28,40 +27,56 @@ std::wostream *open_ofstream(wchar_t* name, const std::ios_base::openmode  mode)
 #endif
 }
 
-
-
-static std::wostream *_log = NULL;
-
-void writeUTF8(wchar_t *w){
-	std::wcout<<w;
-	if(_log)
-		*_log<<w;
-	//else
-	//{
-	//	std::wcout<<L"LOG is null"<<std::endl;
-	//}
-	SysFreeString(w);
-}
-
-void initArgs(wchar_t *out, wchar_t *in[],int len){
-	wcscpy(out,L"\0");
-	for(int i=2;i<len;++i){
-		if(wcscmp(in[i],L"--vsdlog")==0){
-			if(i+1<=len){
-				i++;
-				_log = open_ofstream(in[i++], std::ios::app); 
-			}else
-			{
-				std::wcout<<"Error to few arguments"<<std::endl;
+class VSDImp: public VSDClient{
+public:
+	VSDImp(wchar_t *out, wchar_t *in[],int len)
+		:m_log(NULL)
+	{
+		wcscpy(out,L"\0");
+		for(int i=2;i<len;++i){
+			if(wcscmp(in[i],L"--vsdlog")==0){
+				if(i+1<=len){
+					i++;
+					m_log = open_ofstream(in[i++], std::ios::app); 
+				}else
+				{
+					std::wcout<<"Error to few arguments"<<std::endl;
+				}
+				continue;
 			}
-			continue;
-		}
 
-		wcscat(out,L" \"");
-		wcscat(out,in[i]);
-		wcscat(out,L"\"");
+			wcscat(out,L" \"");
+			wcscat(out,in[i]);
+			wcscat(out,L"\"");
+		}
 	}
-}
+
+
+	~VSDImp()
+	{
+		if(m_log)
+			m_log->flush();
+	}
+
+	void write(wchar_t *data)
+	{
+		std::wcout<<data;
+		if(m_log)
+			*m_log<<data;
+		//else
+		//{
+		//	std::wcout<<L"LOG is null"<<std::endl;
+		//}
+		SysFreeString(data);
+	}
+
+private:
+	std::wostream *m_log;
+};
+
+
+
+
 
 int _tmain(int argc,wchar_t *argv[])
 {
@@ -69,19 +84,14 @@ int _tmain(int argc,wchar_t *argv[])
 		return -1;
 	wchar_t  *program = argv[1];
 	wchar_t  *arguments = new wchar_t[MAX_PATH *2];
-	initArgs(arguments,argv,argc);
+	VSDImp vsdimp(arguments,argv,argc);
 
-	Process p(program,arguments,writeUTF8);
+	VSDProcess p(program,arguments,&vsdimp);
 	delete [] arguments;
 
 	unsigned long exitCode = p.run();
-	char buf[20];
-	ltoa(exitCode,buf,10);
-	std::wcout<<p.program()<<p.arguments()<<L" Exited with status: "<<buf<<std::endl;
+	std::wcout<<p.program()<<p.arguments()<<L" Exited with status: "<<exitCode<<std::endl;
 
-	if(_log){
-		_log->flush();
-	}
 	return exitCode;
 }
 
