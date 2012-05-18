@@ -24,14 +24,12 @@ namespace libvsd {
         ~Process();
 
         int run();
-        void setANSICallback(readyReadANSI *ansi);
         void setUTF8Callback(readyReadUTF8 *utf8);
         wchar_t *program();
         wchar_t *arguments();
 
     private:
         void readDebugMSG(DEBUG_EVENT &debugEvent);
-        readyReadANSI *m_readyAnsi;
         readyReadUTF8 *m_readyUTF8;
         wchar_t *m_program;
         wchar_t *m_arguments;

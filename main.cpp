@@ -36,30 +36,15 @@ void writeUTF8(wchar_t *w){
 	std::wcout<<w;
 	if(_log)
 		*_log<<w;
-	else
-	{
-		std::wcout<<L"LOG is null"<<std::endl;
-	}
+	//else
+	//{
+	//	std::wcout<<L"LOG is null"<<std::endl;
+	//}
+	SysFreeString(w);
 }
 
-void writeANSI(char * c){
-	int len = MultiByteToWideChar(CP_ACP, 0, c, -1, NULL,NULL);
-	wchar_t* buf = new wchar_t[len];
-	MultiByteToWideChar(CP_UTF8, 0, c, -1, buf, len);
-	writeUTF8(buf);
-	delete [] buf;
-}
-
-
-
-wchar_t *quotate(wchar_t *in){
-	wchar_t *out =  new wchar_t[wcslen(in)+2];
-	wcscpy(out,L"\"");
-	wcscpy(out+1,in);
-	wcscpy(out+1+wcslen(in),L"\"");
-	return out;
-}
 void initArgs(wchar_t *out, wchar_t *in[],int len){
+	wcscpy(out,L"\0");
 	for(int i=2;i<len;++i){
 		if(wcscmp(in[i],L"--log")==0){
 			if(i+1<=len){
@@ -72,20 +57,14 @@ void initArgs(wchar_t *out, wchar_t *in[],int len){
 			continue;
 		}
 
-		wchar_t *tmp = quotate(in[i]);
-		wcscpy(out++,L" ");
-		wcscpy(out,tmp);
-		out += wcslen(tmp);
-		delete []tmp;
+		wcscat(out,L" \"");
+		wcscat(out,in[i]);
+		wcscat(out,L"\"");
 	}
-	wcscpy(out++,L"\0");
 }
 
-int main()
+int _tmain(int argc,wchar_t *argv[])
 {
-	int argc;
-	wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-
 	if(argc<2)
 		return -1;
 	wchar_t  *program = argv[1];
@@ -96,7 +75,6 @@ int main()
 	delete [] arguments;
 
 
-	p.setANSICallback(writeANSI);
 	p.setUTF8Callback(writeUTF8);
 
 
