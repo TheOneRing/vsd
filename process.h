@@ -13,6 +13,29 @@
 
 namespace libvsd {
 
+	struct Pipe
+{
+	Pipe()
+		: hWrite(INVALID_HANDLE_VALUE)
+		, hRead(INVALID_HANDLE_VALUE)
+	{
+		ZeroMemory(&overlapped, sizeof(overlapped));
+	}
+
+
+	~Pipe()
+	{
+		if (hWrite != INVALID_HANDLE_VALUE)
+			CloseHandle(hWrite);
+		if (hRead != INVALID_HANDLE_VALUE)
+			CloseHandle(hRead);
+	}
+
+	HANDLE hWrite;
+	HANDLE hRead;
+	OVERLAPPED overlapped;
+};
+
 
     class LIBVSD_EXPORT Process
     {
@@ -33,9 +56,9 @@ namespace libvsd {
         wchar_t *m_program;
         wchar_t *m_arguments;
 
-        HANDLE m_stdOut;
         STARTUPINFO m_si; 
         PROCESS_INFORMATION m_pi; 
+		Pipe m_stdout;
 
 
     };

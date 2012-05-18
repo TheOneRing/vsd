@@ -5,38 +5,48 @@
 #include <iostream>
 
 #include <stdlib.h>
-
+//inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp
 using namespace libvsd;
 
-struct Pipe
-{
-	Pipe()
-		: hWrite(INVALID_HANDLE_VALUE)
-		, hRead(INVALID_HANDLE_VALUE)
-	{}
-
-	~Pipe()
-	{
-		if (hWrite != INVALID_HANDLE_VALUE)
-			CloseHandle(hWrite);
-		if (hRead != INVALID_HANDLE_VALUE)
-			CloseHandle(hRead);
-	}
-
-	HANDLE hWrite;
-	HANDLE hRead;
-};
 
 static bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
 {
-	if (!CreatePipe(&pipe.hRead, &pipe.hWrite, sa, 0)) {
-		std::wcerr<<L"CreatePipe failed with error code "<<GetLastError()<<std::endl;
+	size_t maxPipeLen = 256;
+	wchar_t *pipeName = new wchar_t[maxPipeLen];
+	unsigned int randomValue;
+	if (rand_s(&randomValue) != 0)
+		randomValue = rand();
+	swprintf_s(pipeName, maxPipeLen, L"\\\\.\\pipe\\vsd-%X", randomValue);
+
+	DWORD dwPipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
+	const DWORD dwPipeBufferSize = 1024 * 1024;
+
+	pipe.hRead = CreateNamedPipe(pipeName,
+		PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+		dwPipeMode,
+		1,                      // only one pipe instance
+		0,                      // output buffer size
+		dwPipeBufferSize,       // input buffer size
+		0,
+		sa);
+	if(  pipe.hRead == INVALID_HANDLE_VALUE){
+		std::wcerr<<L"Creation of the pipe failed "<<GetLastError()<<std::endl;
 		return false;
 	}
-	if (!SetHandleInformation(pipe.hRead, HANDLE_FLAG_INHERIT, 0)) {
-		std::wcerr<<L"SetHandleInformation failed with error code "<<GetLastError()<<std::endl;
+
+
+	pipe.hWrite = CreateFile(pipeName,
+		GENERIC_WRITE,
+		0,
+		sa,
+		OPEN_EXISTING,
+		FILE_FLAG_OVERLAPPED,
+		NULL);
+	if(  pipe.hWrite == INVALID_HANDLE_VALUE){
+		std::wcerr<<L"Creation of the pipe failed "<<GetLastError()<<std::endl;
 		return false;
 	}
+	ConnectNamedPipe(pipe.hRead, NULL);
 	return true;
 }
 
@@ -50,24 +60,18 @@ Process::Process(wchar_t *program,wchar_t * arguments,readyReadUTF8 *utf8)
 	SECURITY_ATTRIBUTES sa = {0};
 	sa.nLength = sizeof(sa);
 	sa.bInheritHandle = TRUE;
-	Pipe sout;
-	Pipe serr;
 
-	if (!setupPipe(sout, &sa)){
+
+	if (!setupPipe(m_stdout, &sa)){
 		std::wcerr<<L"Cannot setup pipe for sout."<<std::endl;
 		exit(1);
 	}
 
-
-	DuplicateHandle(GetCurrentProcess(),sout.hWrite, GetCurrentProcess(),
-		&serr.hWrite, 0, TRUE, DUPLICATE_SAME_ACCESS);
-
-	m_stdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	ZeroMemory( &m_si, sizeof(m_si) );
 	m_si.cb = sizeof(m_si); 
 	m_si.dwFlags |= STARTF_USESTDHANDLES;
-	m_si.hStdOutput = sout.hWrite;
-	m_si.hStdError = serr.hWrite;
+	m_si.hStdOutput = m_stdout.hWrite;
+	m_si.hStdError =  m_stdout.hWrite;
 
 	ZeroMemory( &m_pi, sizeof(m_pi) );
 }
@@ -87,35 +91,42 @@ int Process::run(){
 	DEBUG_EVENT debug_event = {0};
 	unsigned long exitCode = 0;
 	bool run = true;
-	DWORD dwRead, dwWritten;
 	const size_t buflen = 4096;
-	wchar_t chBuf[buflen];
+	char chBuf[buflen];
 	BOOL bSuccess = FALSE;
+	DWORD dwRead;
+
 
 	while(run)
 	{
-		bSuccess = ReadFile(m_si.hStdError, chBuf, buflen, &dwRead, NULL);
-		if(bSuccess || dwRead != 0){
-			wchar_t * msg = SysAllocString(chBuf);
-			m_readyUTF8(msg);
+		bSuccess = PeekNamedPipe(m_stdout.hRead, NULL, 0, NULL, &dwRead, NULL);
+		if(bSuccess && dwRead>0){
+			if(ReadFile(m_stdout.hRead, chBuf,dwRead,NULL,&m_stdout.overlapped)){
+				wchar_t *olechar = new wchar_t[dwRead+1];
+				MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, chBuf, -1, olechar, dwRead+1);
+				wcscpy(olechar+dwRead,L"\0");
+				wchar_t * msg = SysAllocString(olechar);
+				delete []olechar;
+				m_readyUTF8(msg);
+			}
 		}
-		if (!WaitForDebugEvent(&debug_event, INFINITE))
-			return -1;
-		switch(debug_event.dwDebugEventCode){
-		case  OUTPUT_DEBUG_STRING_EVENT:
-			readDebugMSG(debug_event);
-			break;
-		case EXIT_PROCESS_DEBUG_EVENT:
-			exitCode = debug_event.u.ExitProcess.dwExitCode;
-			run = false;
-			break;
-		default:
-			break;
+		if (WaitForDebugEvent(&debug_event,500)){
+			switch(debug_event.dwDebugEventCode){
+			case  OUTPUT_DEBUG_STRING_EVENT:
+				readDebugMSG(debug_event);
+				break;
+			case EXIT_PROCESS_DEBUG_EVENT:
+				exitCode = debug_event.u.ExitProcess.dwExitCode;
+				run = false;
+				break;
+			default:
+				break;
+			}
 		}
-
 
 		ContinueDebugEvent(debug_event.dwProcessId,debug_event.dwThreadId,DBG_CONTINUE);
 	}
+
 
 	CloseHandle( m_pi.hProcess );
 	CloseHandle( m_pi.hThread );
@@ -128,22 +139,22 @@ Client has to Free  the string
 void Process::readDebugMSG(DEBUG_EVENT &debugEvent){
 	OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
 	wchar_t *message;
-	
+
 	wchar_t *msg = new wchar_t[DebugString.nDebugStringLength];
 	ReadProcessMemory(m_pi.hProcess,DebugString.lpDebugStringData,msg,DebugString.nDebugStringLength, NULL);
 
 
 	if ( DebugString.fUnicode ){
-			message = SysAllocString(msg);
+		message = SysAllocString(msg);
 	}else{
-			OLECHAR *olechar = new OLECHAR[DebugString.nDebugStringLength];
-			MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (char*)msg, -1, olechar, DebugString.nDebugStringLength+1);  
-			message = SysAllocString(olechar);
-			delete []olechar;
+		wchar_t *olechar = new wchar_t[DebugString.nDebugStringLength];
+		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (char*)msg, -1, olechar, DebugString.nDebugStringLength+1);  
+		message = SysAllocString(olechar);
+		delete []olechar;
 	}
 	delete []msg;
 
-		
+
 	m_readyUTF8(message);
 }
 
