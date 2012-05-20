@@ -26,6 +26,10 @@
 #include <iostream>
 
 #include <stdlib.h>
+
+#ifdef __MINGW64_VERSION_MAJOR
+#define PIPE_REJECT_REMOTE_CLIENTS 0x00000008
+#endif
 //inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp
 using namespace libvsd;
 
@@ -90,9 +94,9 @@ public:
 	{
 		size_t maxPipeLen = 256;
 		wchar_t *pipeName = new wchar_t[maxPipeLen];
-		unsigned int randomValue;
-		if (rand_s(&randomValue) != 0)
-			randomValue = rand();
+        unsigned int randomValue;
+        if (rand_s(&randomValue) != 0)
+            randomValue = rand();
 		swprintf_s(pipeName, maxPipeLen, L"\\\\.\\pipe\\vsd-%X", randomValue);
 
 		DWORD dwPipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;

@@ -36,13 +36,13 @@ using namespace libvsd;
 std::wostream *open_ofstream(wchar_t* name, const std::ios_base::openmode  mode)
 {
 #ifndef _MSC_VER
-	std::wcout<<L"opening file"<<name<<std::endl;
-	FILE* c_file = _wfopen( name, L"w,ccs=UNICODE" );
-	__gnu_cxx::stdio_filebuf<wchar_t>* buffer = new __gnu_cxx::stdio_filebuf<wchar_t>( c_file, std::ios::out, 1 );
+    std::wcout<<L"opening file"<<name<<std::endl;
+    FILE* c_file = _wfopen( name, L"w,ccs=UNICODE" );
+    __gnu_cxx::stdio_filebuf<wchar_t>* buffer = new __gnu_cxx::stdio_filebuf<wchar_t>( c_file, std::ios::out, 1 );
 
-	return new std::wostream(buffer);
+    return new std::wostream(buffer);
 #else
-	return new std::wofstream(name,mode);
+    return new std::wofstream(name,mode);
 #endif
 }
 
@@ -50,50 +50,50 @@ void printHelp(){
 	std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<
 	std::endl<<L"Options:"<<
 	std::endl<<L"--vsdlog logFile\t File to log VSD output to"<<
-	std::endl<<L"--help \t\t\t print this help";	
+	std::endl<<L"--help \t\t\t print this help";
 	exit(0);
 }
 
 class VSDImp: public VSDClient{
 public:
-	VSDImp(wchar_t *out, wchar_t *in[],int len)
-		:m_log(NULL)
+    VSDImp(wchar_t *out, wchar_t *in[],int len)
+        :m_log(NULL)
 	{
-		printHelp();
 		wcscpy(out,L"\0");
-		for(int i=2;i<len;++i){
+        for(int i=1;i<len;++i){
 			if(wcscmp(in[i],L"--vsdlog")==0){
 				if(i+1<=len){
 					i++;
-					m_log = open_ofstream(in[i++], std::ios::app); 
+                    m_log = open_ofstream(in[i++], std::ios::app);
 				}else
 				{
 					printHelp();
 				}
-				continue;
-			}
-			if(wcscmp(in[i],L"--help")==0){
+			}else  if(wcscmp(in[i],L"--help")==0){
 				printHelp();
+            }else if(i>1){
+				wcscat(out,L" \"");
+				wcscat(out,in[i]);
+				wcscat(out,L"\"");
 			}
-			
-			wcscat(out,L" \"");
-			wcscat(out,in[i]);
-			wcscat(out,L"\"");
 		}
 	}
 
 
 	~VSDImp()
 	{
-		if(m_log)
-			m_log->flush();
+        if(m_log){
+            m_log->flush();
+            delete m_log;
+        }
+
 	}
 
 	void write(const wchar_t *data)
 	{
 		std::wcout<<data;
 		if(m_log)
-			*m_log<<data;
+            *m_log<<data;
 		//else
 		//{
 		//	std::wcout<<L"LOG is null"<<std::endl;
@@ -108,8 +108,10 @@ private:
 
 
 
-int _tmain(int argc,wchar_t *argv[])
+int main()
 {
+	int argc;  
+	wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);  
 	if(argc<2){
 		printHelp();
 	}
