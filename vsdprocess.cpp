@@ -8,7 +8,6 @@
 //inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp
 using namespace libvsd;
 
-
 class VSDProcess::PrivateVSDProcess{
 public:
 	struct Pipe
@@ -109,24 +108,21 @@ public:
 
 	void readDebugMSG(DEBUG_EVENT &debugEvent){
 		OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
-		wchar_t *message;
 
 		wchar_t *msg = new wchar_t[DebugString.nDebugStringLength];
 		ReadProcessMemory(m_pi.hProcess,DebugString.lpDebugStringData,msg,DebugString.nDebugStringLength, NULL);
 
 
 		if ( DebugString.fUnicode ){
-			message = SysAllocString(msg);
+			m_client->write(msg);
 		}else{
-			wchar_t *olechar = new wchar_t[DebugString.nDebugStringLength];
-			MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (char*)msg, -1, olechar, DebugString.nDebugStringLength+1);  
-			message = SysAllocString(olechar);
-			delete []olechar;
+			wchar_t *message = new wchar_t[DebugString.nDebugStringLength];
+			MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (char*)msg, -1, message, DebugString.nDebugStringLength+1);
+			m_client->write(message);
+			delete [] message;
 		}
-		delete []msg;
+		delete [] msg;
 
-
-		m_client->write(message);
 	}
 
 	int run(){
@@ -140,6 +136,7 @@ public:
 		bool run = true;
 		const size_t buflen = 4096;
 		char chBuf[buflen];
+		wchar_t chwBuf[buflen];
 		BOOL bSuccess = FALSE;
 		DWORD dwRead;
 
@@ -147,14 +144,11 @@ public:
 		while(run)
 		{
 			bSuccess = PeekNamedPipe(m_stdout.hRead, NULL, 0, NULL, &dwRead, NULL);
-			if(bSuccess && dwRead>0){
+			if(bSuccess && dwRead>0){//TODO:detect if I get wchar_t or char from the subprocess
 				if(ReadFile(m_stdout.hRead, chBuf,dwRead,NULL,&m_stdout.overlapped)){
-					wchar_t *olechar = new wchar_t[dwRead+1];
-					MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, chBuf, -1, olechar, dwRead+1);
-					wcscpy(olechar+dwRead,L"\0");
-					wchar_t * msg = SysAllocString(olechar);
-					delete []olechar;
-					m_client->write(msg);
+					MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, chBuf, -1, chwBuf, dwRead+1);
+					wcscpy(chwBuf+dwRead,L"\0");
+					m_client->write(chwBuf);
 				}
 			}
 			if (WaitForDebugEvent(&debug_event,500)){
@@ -175,7 +169,7 @@ public:
 		}
 
 
-		CloseHandle(m_pi.hProcess );
+		CloseHandle( m_pi.hProcess );
 		CloseHandle( m_pi.hThread );
 		return exitCode;
 	}

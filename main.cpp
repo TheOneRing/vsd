@@ -58,7 +58,7 @@ public:
 			m_log->flush();
 	}
 
-	void write(wchar_t *data)
+	void write(const wchar_t *data)
 	{
 		std::wcout<<data;
 		if(m_log)
@@ -67,7 +67,6 @@ public:
 		//{
 		//	std::wcout<<L"LOG is null"<<std::endl;
 		//}
-		SysFreeString(data);
 	}
 
 private:

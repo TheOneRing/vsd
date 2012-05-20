@@ -17,7 +17,7 @@ namespace libvsd {
 	public:
 		VSDClient();
 		~VSDClient();
-		virtual void write(wchar_t *data) = 0;
+		virtual void write(const wchar_t *data) = 0;
 	};
 
 	class LIBVSD_EXPORT VSDProcess
