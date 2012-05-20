@@ -46,11 +46,20 @@ std::wostream *open_ofstream(wchar_t* name, const std::ios_base::openmode  mode)
 #endif
 }
 
+void printHelp(){
+	std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<
+	std::endl<<L"Options:"<<
+	std::endl<<L"--vsdlog logFile\t File to log VSD output to"<<
+	std::endl<<L"--help \t\t\t print this help";	
+	exit(0);
+}
+
 class VSDImp: public VSDClient{
 public:
 	VSDImp(wchar_t *out, wchar_t *in[],int len)
 		:m_log(NULL)
 	{
+		printHelp();
 		wcscpy(out,L"\0");
 		for(int i=2;i<len;++i){
 			if(wcscmp(in[i],L"--vsdlog")==0){
@@ -59,11 +68,14 @@ public:
 					m_log = open_ofstream(in[i++], std::ios::app); 
 				}else
 				{
-					std::wcout<<"Error to few arguments"<<std::endl;
+					printHelp();
 				}
 				continue;
 			}
-
+			if(wcscmp(in[i],L"--help")==0){
+				printHelp();
+			}
+			
 			wcscat(out,L" \"");
 			wcscat(out,in[i]);
 			wcscat(out,L"\"");
@@ -98,8 +110,9 @@ private:
 
 int _tmain(int argc,wchar_t *argv[])
 {
-	if(argc<2)
-		return -1;
+	if(argc<2){
+		printHelp();
+	}
 	wchar_t  *program = argv[1];
 	wchar_t  *arguments = new wchar_t[MAX_PATH *2];
 	VSDImp vsdimp(arguments,argv,argc);
