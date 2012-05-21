@@ -33,19 +33,6 @@ using namespace libvsd;
 
 
 
-std::wostream *open_ofstream(wchar_t* name, const std::ios_base::openmode  mode)
-{
-#ifndef _MSC_VER
-    std::wcout<<L"opening file"<<name<<std::endl;
-    FILE* c_file = _wfopen( name, L"w,ccs=UNICODE" );
-    __gnu_cxx::stdio_filebuf<wchar_t>* buffer = new __gnu_cxx::stdio_filebuf<wchar_t>( c_file, std::ios::out, 1 );
-
-    return new std::wostream(buffer);
-#else
-    return new std::wofstream(name,mode);
-#endif
-}
-
 void printHelp(){
 	std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<
 	std::endl<<L"Options:"<<
@@ -57,14 +44,20 @@ void printHelp(){
 class VSDImp: public VSDClient{
 public:
     VSDImp(wchar_t *out, wchar_t *in[],int len)
-        :m_log(NULL)
+		:m_log(INVALID_HANDLE_VALUE)
 	{
 		wcscpy(out,L"\0");
         for(int i=1;i<len;++i){
 			if(wcscmp(in[i],L"--vsdlog")==0){
 				if(i+1<=len){
 					i++;
-                    m_log = open_ofstream(in[i++], std::ios::app);
+					m_log = CreateFile(in[i++],                // name of the write
+                       GENERIC_WRITE,          // open for writing
+                       0,                      // do not share
+                       NULL,                   // default security
+                       CREATE_ALWAYS,             // create new file only
+                       FILE_ATTRIBUTE_NORMAL,  // normal file
+                       NULL); 
 				}else
 				{
 					printHelp();
@@ -82,9 +75,8 @@ public:
 
 	~VSDImp()
 	{
-        if(m_log){
-            m_log->flush();
-            delete m_log;
+        if(m_log != INVALID_HANDLE_VALUE){
+			CloseHandle(m_log);
         }
 
 	}
@@ -92,8 +84,11 @@ public:
 	void write(const wchar_t *data)
 	{
 		std::wcout<<data;
-		if(m_log)
-            *m_log<<data;
+		if(m_log != INVALID_HANDLE_VALUE){
+			size_t len = wcslen(data);
+			DWORD dwRead;
+			WriteFile(m_log,data,wcslen(data)*sizeof(wchar_t),&dwRead,NULL);
+		}
 		//else
 		//{
 		//	std::wcout<<L"LOG is null"<<std::endl;
@@ -101,7 +96,7 @@ public:
 	}
 
 private:
-	std::wostream *m_log;
+	HANDLE m_log;
 };
 
 
