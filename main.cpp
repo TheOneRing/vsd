@@ -25,9 +25,6 @@
 
 #include "vsdprocess.h"
 
-#ifndef _MSC_VER
-#include <ext/stdio_filebuf.h>
-#endif
 
 using namespace libvsd;
 
@@ -43,28 +40,21 @@ void printHelp(){
 
 class VSDImp: public VSDClient{
 public:
-    VSDImp(wchar_t *out, wchar_t *in[],int len)
+	VSDImp(wchar_t *out, wchar_t *in[],int len)
 		:m_log(INVALID_HANDLE_VALUE)
 	{
 		wcscpy(out,L"\0");
-        for(int i=1;i<len;++i){
+		for(int i=1;i<len;++i){
 			if(wcscmp(in[i],L"--vsdlog")==0){
 				if(i+1<=len){
 					i++;
-					m_log = CreateFile(in[i++],                // name of the write
-                       GENERIC_WRITE,          // open for writing
-                       0,                      // do not share
-                       NULL,                   // default security
-                       CREATE_ALWAYS,             // create new file only
-                       FILE_ATTRIBUTE_NORMAL,  // normal file
-                       NULL); 
-				}else
-				{
+					m_log = CreateFile(in[i++],GENERIC_WRITE,FILE_SHARE_READ,NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL); 
+				}else{
 					printHelp();
 				}
 			}else  if(wcscmp(in[i],L"--help")==0){
 				printHelp();
-            }else if(i>1){
+			}else if(i>1){
 				wcscat(out,L" \"");
 				wcscat(out,in[i]);
 				wcscat(out,L"\"");
@@ -75,10 +65,9 @@ public:
 
 	~VSDImp()
 	{
-        if(m_log != INVALID_HANDLE_VALUE){
+		if(m_log != INVALID_HANDLE_VALUE){
 			CloseHandle(m_log);
-        }
-
+		}
 	}
 
 	void write(const wchar_t *data)
@@ -89,10 +78,6 @@ public:
 			DWORD dwRead;
 			WriteFile(m_log,data,wcslen(data)*sizeof(wchar_t),&dwRead,NULL);
 		}
-		//else
-		//{
-		//	std::wcout<<L"LOG is null"<<std::endl;
-		//}
 	}
 
 private:

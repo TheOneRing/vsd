@@ -27,7 +27,7 @@
 
 #include <stdlib.h>
 
-#ifdef __MINGW64_VERSION_MAJOR && __MINGW64_VERSION_MAJOR < 2
+#if defined(__MINGW64_VERSION_MAJOR) && __MINGW64_VERSION_MAJOR < 2
 #define PIPE_REJECT_REMOTE_CLIENTS 0x00000008
 errno_t rand_s(unsigned int *in){
 	*in = rand();

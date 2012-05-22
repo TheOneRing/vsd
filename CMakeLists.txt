@@ -15,3 +15,7 @@ set_target_properties( libvsd PROPERTIES DEFINE_SYMBOL BUILDING_LIBVSD)
 
 add_executable(vsd main.cpp )
 target_link_libraries(vsd libvsd)
+
+install(TARGETS libvsd vsd RUNTIME DESTINATION bin
+                     LIBRARY DESTINATION lib
+                     ARCHIVE DESTINATION lib)
