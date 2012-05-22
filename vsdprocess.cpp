@@ -28,8 +28,10 @@
 #include <stdlib.h>
 
 #if defined(__MINGW64_VERSION_MAJOR) && __MINGW64_VERSION_MAJOR < 2
+#include <time.h>
 #define PIPE_REJECT_REMOTE_CLIENTS 0x00000008
 errno_t rand_s(unsigned int *in){
+	srand(time(NULL));
 	*in = rand();
 	return 0;
 }
@@ -101,9 +103,9 @@ public:
 	{
 		size_t maxPipeLen = 256;
 		wchar_t *pipeName = new wchar_t[maxPipeLen];
-        unsigned int randomValue;
-        if (rand_s(&randomValue) != 0)
-            randomValue = rand();
+		unsigned int randomValue;
+		if (rand_s(&randomValue) != 0)
+		    randomValue = rand();
 		swprintf_s(pipeName, maxPipeLen, L"\\\\.\\pipe\\vsd-%X", randomValue);
 
 		DWORD dwPipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
@@ -118,7 +120,7 @@ public:
 			0,
 			sa);
 		if(  pipe.hRead == INVALID_HANDLE_VALUE){
-			std::wcerr<<L"Creation of the pipe failed "<<GetLastError()<<std::endl;
+			std::wcerr<<L"Creation of the NamedPipe "<<pipeName<<L" failed "<<GetLastError()<<std::endl;
 			return false;
 		}
 
@@ -131,7 +133,7 @@ public:
 			FILE_FLAG_OVERLAPPED,
 			NULL);
 		if(  pipe.hWrite == INVALID_HANDLE_VALUE){
-			std::wcerr<<L"Creation of the pipe failed "<<GetLastError()<<std::endl;
+			std::wcerr<<L"Creation of the pipe "<<pipeName<<L" failed "<<GetLastError()<<std::endl;
 			return false;
 		}
 		ConnectNamedPipe(pipe.hRead, NULL);
