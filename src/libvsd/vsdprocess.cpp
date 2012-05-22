@@ -14,29 +14,19 @@
 ** Lesser General Public License for more details.
 **
 ** You should have received a copy of the GNU Lesser General Public
-** License along with FFmpeg; if not, write to the Free Software
+** License along with VSD; if not, write to the Free Software
 ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
 
 #include "vsdprocess.h"
+#include "vsdcompat.h"
 
 #include <windows.h>
 #include <winbase.h>
 #include <iostream>
 
 #include <stdlib.h>
-
-#if defined(__MINGW64_VERSION_MAJOR) && __MINGW64_VERSION_MAJOR < 2
-#include <time.h>
-#define PIPE_REJECT_REMOTE_CLIENTS 0x00000008
-errno_t rand_s(unsigned int *in){
-	srand(time(NULL));
-	*in = rand();
-	return 0;
-}
-#warning old mingw detected
-#endif
 
 
 //inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp

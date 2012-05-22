@@ -14,23 +14,14 @@
 ** Lesser General Public License for more details.
 **
 ** You should have received a copy of the GNU Lesser General Public
-** License along with FFmpeg; if not, write to the Free Software
+** License along with VSD; if not, write to the Free Software
 ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
 #ifndef VSDPROCESS_H
 #define VSDPROCESS_H
 
-#ifndef LIBVSD_EXPORT
-	#ifdef LIBVSD_STATIC
-		#define LIBVSD_EXPORT
-	#elif defined(BUILDING_LIBVSD)
-		#define LIBVSD_EXPORT __declspec(dllimport)
-	#else
-		#define LIBVSD_EXPORT __declspec(dllexport)
-	#endif
-#endif
-
+#include "vsd_exports.h"
 
 #include <windows.h>
 
