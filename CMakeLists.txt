@@ -8,10 +8,17 @@ else(MSVC)
     add_definitions(-DMINGW_HAS_SECURE_API)
 endif(MSVC)
 
-add_library(libvsd SHARED vsdprocess.cpp)
+option(STATIC_VSD "Build libvsd static" ON)
+
+if(${STATIC_VSD})
+    add_definitions(-DLIBVSD_STATIC)
+    set(LIBVSD_BUILDTYPE STATIC)
+else(${STATIC_VSD})
+    set(LIBVSD_BUILDTYPE SHARED)
+endif(${STATIC_VSD})
+
+add_library(libvsd ${LIBSVSD_BUILDTYPE} vsdprocess.cpp)
 set_target_properties( libvsd PROPERTIES DEFINE_SYMBOL BUILDING_LIBVSD)
-
-
 
 add_executable(vsd main.cpp )
 target_link_libraries(vsd libvsd)

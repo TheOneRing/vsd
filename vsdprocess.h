@@ -22,12 +22,15 @@
 #define VSDPROCESS_H
 
 #ifndef LIBVSD_EXPORT
-#ifdef BUILDING_LIBVSD
-#define LIBVSD_EXPORT __declspec(dllexport)
-#else
-#define LIBVSD_EXPORT __declspec(dllimport)
+	#ifdef LIBVSD_STATIC
+		#define LIBVSD_EXPORT
+	#elif defined(BUILDING_LIBVSD)
+		#define LIBVSD_EXPORT __declspec(dllexport)
+	#else
+		#define LIBVSD_EXPORT __declspec(dllimport)
+	#endif
 #endif
-#endif
+
 
 #include <windows.h>
 
