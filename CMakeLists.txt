@@ -6,6 +6,7 @@ if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 else(MSVC)
     add_definitions(-DMINGW_HAS_SECURE_API)
+    set(CMAKE_EXE_LINKER_FLAGS ${MAKE_EXE_LINKER_FLAGS} -static)
 endif(MSVC)
 
 option(STATIC_VSD "Build libvsd static" ON)
