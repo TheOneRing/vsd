@@ -37,3 +37,5 @@ target_link_libraries(vsd libvsd)
 install(TARGETS libvsd vsd RUNTIME DESTINATION bin
                      LIBRARY DESTINATION lib
                      ARCHIVE DESTINATION lib)
+                     
+install(FILES vsdprocess.h DESTINATION include/vsd)
