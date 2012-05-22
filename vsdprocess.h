@@ -25,9 +25,9 @@
 	#ifdef LIBVSD_STATIC
 		#define LIBVSD_EXPORT
 	#elif defined(BUILDING_LIBVSD)
-		#define LIBVSD_EXPORT __declspec(dllexport)
-	#else
 		#define LIBVSD_EXPORT __declspec(dllimport)
+	#else
+		#define LIBVSD_EXPORT __declspec(dllexport)
 	#endif
 #endif
 
