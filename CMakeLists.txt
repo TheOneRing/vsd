@@ -11,12 +11,19 @@ endif(MSVC)
 
 option(STATIC_VSD "Build libvsd static" ON)
 
-if(${STATIC_VSD})
+if(STATIC_VSD)
     add_definitions(-DLIBVSD_STATIC)
     set(LIBVSD_BUILDTYPE STATIC)
-else(${STATIC_VSD})
+
+    # todo: mingw
+    if(MSVC)
+        foreach(_bt DEBUG RELEASE RELWITHDEBINFO)
+            string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_${_bt} ${CMAKE_CXX_FLAGS_${_bt}})
+        endforeach(_bt DEBUG RELEASE RELWITHDEBINFO)
+    endif(MSVC)
+else(STATIC_VSD)
     set(LIBVSD_BUILDTYPE SHARED)
-endif(${STATIC_VSD})
+endif(STATIC_VSD)
 
 add_library(libvsd ${LIBSVSD_BUILDTYPE} vsdprocess.cpp)
 set_target_properties( libvsd PROPERTIES DEFINE_SYMBOL BUILDING_LIBVSD)
