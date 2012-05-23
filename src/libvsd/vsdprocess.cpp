@@ -36,30 +36,30 @@ using namespace libvsd;
 
 class VSDProcess::PrivateVSDProcess{
 public:
-	struct Pipe
-	{
-		Pipe()
-			: hWrite(INVALID_HANDLE_VALUE)
-			, hRead(INVALID_HANDLE_VALUE)
-		{
-			ZeroMemory(&overlapped, sizeof(overlapped));
-		}
+    struct Pipe
+    {
+        Pipe()
+            : hWrite(INVALID_HANDLE_VALUE)
+            , hRead(INVALID_HANDLE_VALUE)
+        {
+            ZeroMemory(&overlapped, sizeof(overlapped));
+        }
 
 
-		~Pipe()
-		{
-			if (hWrite != INVALID_HANDLE_VALUE)
-				CloseHandle(hWrite);
-			if (hRead != INVALID_HANDLE_VALUE)
-				CloseHandle(hRead);
-		}
+        ~Pipe()
+        {
+            if (hWrite != INVALID_HANDLE_VALUE)
+                CloseHandle(hWrite);
+            if (hRead != INVALID_HANDLE_VALUE)
+                CloseHandle(hRead);
+        }
 
-		HANDLE hWrite;
-		HANDLE hRead;
-		OVERLAPPED overlapped;
-	};
+        HANDLE hWrite;
+        HANDLE hRead;
+        OVERLAPPED overlapped;
+    };
 
-	PrivateVSDProcess(const wchar_t *program,const wchar_t * arguments,VSDClient *client)
+    PrivateVSDProcess(const wchar_t *program,const wchar_t * arguments,VSDClient *client)
         :m_client(client)
         ,m_program(SysAllocString(program))
         ,m_arguments(SysAllocString(arguments))
@@ -67,102 +67,102 @@ public:
         ,m_exitCode(0)
     {
 
-		SECURITY_ATTRIBUTES sa = {0};
-		sa.nLength = sizeof(sa);
-		sa.bInheritHandle = TRUE;
+        SECURITY_ATTRIBUTES sa = {0};
+        sa.nLength = sizeof(sa);
+        sa.bInheritHandle = TRUE;
 
 
-		if (!setupPipe(m_stdout, &sa)){
-			std::wcerr<<L"Cannot setup pipe for sout."<<std::endl;
-			exit(1);
-		}
+        if (!setupPipe(m_stdout, &sa)){
+            std::wcerr<<L"Cannot setup pipe for sout."<<std::endl;
+            exit(1);
+        }
 
-		ZeroMemory( &m_si, sizeof(m_si) );
-		m_si.cb = sizeof(m_si); 
-		m_si.dwFlags |= STARTF_USESTDHANDLES;
-		m_si.hStdOutput = m_stdout.hWrite;
-		m_si.hStdError =  m_stdout.hWrite;
+        ZeroMemory( &m_si, sizeof(m_si) );
+        m_si.cb = sizeof(m_si);
+        m_si.dwFlags |= STARTF_USESTDHANDLES;
+        m_si.hStdOutput = m_stdout.hWrite;
+        m_si.hStdError =  m_stdout.hWrite;
 
-		ZeroMemory( &m_pi, sizeof(m_pi) );
+        ZeroMemory( &m_pi, sizeof(m_pi) );
 
-	}
+    }
 
-	~PrivateVSDProcess()
-	{
-		SysFreeString(m_program);
-		SysFreeString(m_arguments);
+    ~PrivateVSDProcess()
+    {
+        SysFreeString(m_program);
+        SysFreeString(m_arguments);
 
         std::map<unsigned long,wchar_t*>::iterator it;
         for ( it = m_processNames.begin() ; it != m_processNames.end(); it++ )
             SysFreeString((*it).second);
         m_processNames.clear();
 
-	}
+    }
 
-	bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
-	{
-		size_t maxPipeLen = 256;
-		wchar_t *pipeName = new wchar_t[maxPipeLen];
-		unsigned int randomValue;
-		if (rand_s(&randomValue) != 0)
-		    randomValue = rand();
-		swprintf_s(pipeName, maxPipeLen, L"\\\\.\\pipe\\vsd-%X", randomValue);
+    bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
+    {
+        size_t maxPipeLen = 256;
+        wchar_t *pipeName = new wchar_t[maxPipeLen];
+        unsigned int randomValue;
+        if (rand_s(&randomValue) != 0)
+            randomValue = rand();
+        swprintf_s(pipeName, maxPipeLen, L"\\\\.\\pipe\\vsd-%X", randomValue);
 
-		DWORD dwPipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
-		const DWORD dwPipeBufferSize = 1024 * 1024;
+        DWORD dwPipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
+        const DWORD dwPipeBufferSize = 1024 * 1024;
 
-		pipe.hRead = CreateNamedPipe(pipeName,
-			PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-			dwPipeMode,
-			1,                      // only one pipe instance
-			0,                      // output buffer size
-			dwPipeBufferSize,       // input buffer size
-			0,
-			sa);
-		if(  pipe.hRead == INVALID_HANDLE_VALUE){
-			std::wcerr<<L"Creation of the NamedPipe "<<pipeName<<L" failed "<<GetLastError()<<std::endl;
-			return false;
-		}
+        pipe.hRead = CreateNamedPipe(pipeName,
+                                     PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+                                     dwPipeMode,
+                                     1,                      // only one pipe instance
+                                     0,                      // output buffer size
+                                     dwPipeBufferSize,       // input buffer size
+                                     0,
+                                     sa);
+        if(  pipe.hRead == INVALID_HANDLE_VALUE){
+            std::wcerr<<L"Creation of the NamedPipe "<<pipeName<<L" failed "<<GetLastError()<<std::endl;
+            return false;
+        }
 
 
-		pipe.hWrite = CreateFile(pipeName,
-			GENERIC_WRITE,
-			0,
-			sa,
-			OPEN_EXISTING,
-			FILE_FLAG_OVERLAPPED,
-			NULL);
-		if(  pipe.hWrite == INVALID_HANDLE_VALUE){
-			std::wcerr<<L"Creation of the pipe "<<pipeName<<L" failed "<<GetLastError()<<std::endl;
-			return false;
-		}
-		ConnectNamedPipe(pipe.hRead, NULL);
-		return true;
-	}
+        pipe.hWrite = CreateFile(pipeName,
+                                 GENERIC_WRITE,
+                                 0,
+                                 sa,
+                                 OPEN_EXISTING,
+                                 FILE_FLAG_OVERLAPPED,
+                                 NULL);
+        if(  pipe.hWrite == INVALID_HANDLE_VALUE){
+            std::wcerr<<L"Creation of the pipe "<<pipeName<<L" failed "<<GetLastError()<<std::endl;
+            return false;
+        }
+        ConnectNamedPipe(pipe.hRead, NULL);
+        return true;
+    }
 
-	void readDebugMSG(DEBUG_EVENT &debugEvent){
-		OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
+    void readDebugMSG(DEBUG_EVENT &debugEvent){
+        OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
 
         HANDLE processHandle = m_pi.hProcess;
         if(debugEvent.dwProcessId != m_pi.dwProcessId)
             processHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, debugEvent.dwProcessId);
 
-		if ( DebugString.fUnicode ){
+        if ( DebugString.fUnicode ){
             ReadProcessMemory(processHandle,DebugString.lpDebugStringData,m_wcharBuffer2,DebugString.nDebugStringLength, NULL);
             wcscpy(m_wcharBuffer,m_processNames[debugEvent.dwProcessId]);
             wcscat(m_wcharBuffer,L" ");
             wcscat(m_wcharBuffer,m_wcharBuffer2);
-		}else{
+        }else{
             ReadProcessMemory(processHandle,DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
             MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer2, DebugString.nDebugStringLength+1);
             wcscpy(m_wcharBuffer,m_processNames[debugEvent.dwProcessId]);
             wcscat(m_wcharBuffer,L" ");
             wcscat(m_wcharBuffer,m_wcharBuffer2);
-		}
+        }
         m_client->write(m_wcharBuffer);
         if(processHandle != m_pi.hProcess)
             CloseHandle(processHandle);
-	}
+    }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
         GetFinalPathNameByHandle(debugEvent.u.CreateProcessInfo.hFile,m_wcharBuffer2,VSD_BUFLEN,FILE_NAME_OPENED);
@@ -213,14 +213,14 @@ public:
 
 
 
-	int run(){
+    int run(){
 
         unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
         if(m_debugSubProcess)
             debugConfig = DEBUG_PROCESS;
         if(!CreateProcess ( m_program, m_arguments, NULL, NULL, TRUE,debugConfig, NULL,NULL,&m_si, &m_pi )){
-			return -1;
-		}
+            return -1;
+        }
 
         DEBUG_EVENT debug_event = {0};
 
@@ -228,34 +228,34 @@ public:
         {
             readOutput();
             if (WaitForDebugEvent(&debug_event,500)){
-				switch(debug_event.dwDebugEventCode){
-				case  OUTPUT_DEBUG_STRING_EVENT:
-					readDebugMSG(debug_event);
-					break;
+                switch(debug_event.dwDebugEventCode){
+                case  OUTPUT_DEBUG_STRING_EVENT:
+                    readDebugMSG(debug_event);
+                    break;
                 case CREATE_PROCESS_DEBUG_EVENT:
                     readProcessCreated(debug_event);
                     break;
-				case EXIT_PROCESS_DEBUG_EVENT:
+                case EXIT_PROCESS_DEBUG_EVENT:
                     readProcessExited(debug_event);
                     break;
-				default:
-					break;
-				}
-			}
-			ContinueDebugEvent(debug_event.dwProcessId,debug_event.dwThreadId,DBG_CONTINUE);
-		}
+                default:
+                    break;
+                }
+            }
+            ContinueDebugEvent(debug_event.dwProcessId,debug_event.dwThreadId,DBG_CONTINUE);
+        }
 
 
-		CloseHandle( m_pi.hProcess );
-		CloseHandle( m_pi.hThread );
+        CloseHandle( m_pi.hProcess );
+        CloseHandle( m_pi.hThread );
         return m_exitCode;
-	}
+    }
 
 
 
-	VSDClient *m_client;
-	wchar_t *m_program;
-	wchar_t *m_arguments;
+    VSDClient *m_client;
+    wchar_t *m_program;
+    wchar_t *m_arguments;
     bool m_debugSubProcess;
 
     //not thrad safe
@@ -265,9 +265,9 @@ public:
     bool m_run;
     unsigned long m_exitCode;
 
-	STARTUPINFO m_si; 
-	PROCESS_INFORMATION m_pi; 
-	Pipe m_stdout;
+    STARTUPINFO m_si;
+    PROCESS_INFORMATION m_pi;
+    Pipe m_stdout;
 
     std::map <unsigned long,wchar_t*> m_processNames;
 };
@@ -283,21 +283,21 @@ VSDClient::~VSDClient()
 }
 
 VSDProcess::VSDProcess(const wchar_t *program,const wchar_t * arguments,VSDClient *client)
-	:d(new PrivateVSDProcess(program,arguments,client))
+    :d(new PrivateVSDProcess(program,arguments,client))
 {
-	std::wcout<<d->m_program<<d->m_arguments<<std::endl;
+    std::wcout<<d->m_program<<d->m_arguments<<std::endl;
 
 }
 
 
 VSDProcess::~VSDProcess()
 {
-	delete d;
+    delete d;
 }
 
 int VSDProcess::run()
 {
-	return d->run();
+    return d->run();
 }
 
 
@@ -308,12 +308,12 @@ void VSDProcess::debugSubProcess(bool b)
 
 const wchar_t *VSDProcess::program() const
 {
-	return d->m_program;
+    return d->m_program;
 }
 
 const wchar_t *VSDProcess::arguments() const
 {
-	return d->m_arguments;
+    return d->m_arguments;
 }
 
 

@@ -21,12 +21,12 @@
 #ifndef VSD_EXPORTS_H
 #define VSD_EXPORTS_H
 #ifndef LIBVSD_EXPORT
-	#ifdef LIBVSD_STATIC
-		#define LIBVSD_EXPORT
-	#elif defined(BUILDING_LIBVSD)
-		#define LIBVSD_EXPORT __declspec(dllimport)
-	#else
-		#define LIBVSD_EXPORT __declspec(dllexport)
-	#endif
+    #ifdef LIBVSD_STATIC
+        #define LIBVSD_EXPORT
+    #elif defined(BUILDING_LIBVSD)
+        #define LIBVSD_EXPORT __declspec(dllimport)
+    #else
+        #define LIBVSD_EXPORT __declspec(dllexport)
+    #endif
 #endif
 #endif

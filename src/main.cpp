@@ -31,12 +31,12 @@ using namespace libvsd;
 
 
 void printHelp(){
-	std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<
-	std::endl<<L"Options:"<<
-	std::endl<<L"--vsdlog logFile\t File to log VSD output to"<<
-    std::endl<<L"--vsdall\t\t Debug also all processes created by TARGET_APPLICATION"<<
-	std::endl<<L"--help \t\t\t print this help";
-	exit(0);
+    std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<
+                std::endl<<L"Options:"<<
+                std::endl<<L"--vsdlog logFile\t File to log VSD output to"<<
+                std::endl<<L"--vsdall\t\t Debug also all processes created by TARGET_APPLICATION"<<
+                std::endl<<L"--help \t\t\t print this help";
+    exit(0);
 }
 
 class VSDImp: public VSDClient{
@@ -44,59 +44,59 @@ public:
     VSDImp(wchar_t *in[],int len)
         :m_exitCode(0)
         ,m_log(INVALID_HANDLE_VALUE)
-	{
+    {
         wchar_t  *program = in[1];
         wchar_t  *arguments = new wchar_t[MAX_PATH];
         bool withSubProcess = false;
         wcscpy(arguments,L"\0");
-		for(int i=1;i<len;++i){
-			if(wcscmp(in[i],L"--vsdlog")==0){
-				if(i+1<=len){
-					i++;
-					m_log = CreateFile(in[i++],GENERIC_WRITE,FILE_SHARE_READ,NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL); 
-				}else{
-					printHelp();
-				}
+        for(int i=1;i<len;++i){
+            if(wcscmp(in[i],L"--vsdlog")==0){
+                if(i+1<=len){
+                    i++;
+                    m_log = CreateFile(in[i++],GENERIC_WRITE,FILE_SHARE_READ,NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+                }else{
+                    printHelp();
+                }
             }else  if(wcscmp(in[i],L"--vsdall")==0){
-                    withSubProcess = true;
+                withSubProcess = true;
 
-			}else  if(wcscmp(in[i],L"--help")==0){
-				printHelp();
-			}else if(i>1){
+            }else  if(wcscmp(in[i],L"--help")==0){
+                printHelp();
+            }else if(i>1){
                 wcscat(arguments,L" \"");
                 wcscat(arguments,in[i]);
                 wcscat(arguments,L"\"");
-			}
-		}
+            }
+        }
 
         VSDProcess p(program,arguments,this);
         delete [] arguments;
         p.debugSubProcess(withSubProcess);
         m_exitCode = p.run();
         std::wcout<<p.program()<<p.arguments()<<L" Exited with status: "<<m_exitCode<<std::endl;
-	}
+    }
 
 
-	~VSDImp()
-	{
-		if(m_log != INVALID_HANDLE_VALUE){
-			CloseHandle(m_log);
-		}
-	}
+    ~VSDImp()
+    {
+        if(m_log != INVALID_HANDLE_VALUE){
+            CloseHandle(m_log);
+        }
+    }
 
-	void write(const wchar_t *data)
-	{
-		std::wcout<<data;
-		if(m_log != INVALID_HANDLE_VALUE){
-			size_t len = wcslen(data);
-			DWORD dwRead;
-			WriteFile(m_log,data,wcslen(data)*sizeof(wchar_t),&dwRead,NULL);
-		}
-	}
+    void write(const wchar_t *data)
+    {
+        std::wcout<<data;
+        if(m_log != INVALID_HANDLE_VALUE){
+            size_t len = wcslen(data);
+            DWORD dwRead;
+            WriteFile(m_log,data,wcslen(data)*sizeof(wchar_t),&dwRead,NULL);
+        }
+    }
 
     int m_exitCode;
 private:
-	HANDLE m_log;
+    HANDLE m_log;
 
 };
 
@@ -106,11 +106,11 @@ private:
 
 int main()
 {
-	int argc;  
-	wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);  
-	if(argc<2){
-		printHelp();
-	}
+    int argc;
+    wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if(argc<2){
+        printHelp();
+    }
 
 
     VSDImp vsdimp(argv,argc);
