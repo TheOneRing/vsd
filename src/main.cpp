@@ -34,16 +34,21 @@ void printHelp(){
 	std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<
 	std::endl<<L"Options:"<<
 	std::endl<<L"--vsdlog logFile\t File to log VSD output to"<<
+    std::endl<<L"--vsdall\t\t Debug also all processes created by TARGET_APPLICATION"<<
 	std::endl<<L"--help \t\t\t print this help";
 	exit(0);
 }
 
 class VSDImp: public VSDClient{
 public:
-	VSDImp(wchar_t *out, wchar_t *in[],int len)
-		:m_log(INVALID_HANDLE_VALUE)
+    VSDImp(wchar_t *in[],int len)
+        :m_exitCode(0)
+        ,m_log(INVALID_HANDLE_VALUE)
 	{
-		wcscpy(out,L"\0");
+        wchar_t  *program = in[1];
+        wchar_t  *arguments = new wchar_t[MAX_PATH];
+        bool withSubProcess = false;
+        wcscpy(arguments,L"\0");
 		for(int i=1;i<len;++i){
 			if(wcscmp(in[i],L"--vsdlog")==0){
 				if(i+1<=len){
@@ -52,14 +57,23 @@ public:
 				}else{
 					printHelp();
 				}
+            }else  if(wcscmp(in[i],L"--vsdall")==0){
+                    withSubProcess = true;
+
 			}else  if(wcscmp(in[i],L"--help")==0){
 				printHelp();
 			}else if(i>1){
-				wcscat(out,L" \"");
-				wcscat(out,in[i]);
-				wcscat(out,L"\"");
+                wcscat(arguments,L" \"");
+                wcscat(arguments,in[i]);
+                wcscat(arguments,L"\"");
 			}
 		}
+
+        VSDProcess p(program,arguments,this);
+        delete [] arguments;
+        p.debugSubProcess(withSubProcess);
+        m_exitCode = p.run();
+        std::wcout<<p.program()<<p.arguments()<<L" Exited with status: "<<m_exitCode<<std::endl;
 	}
 
 
@@ -80,8 +94,10 @@ public:
 		}
 	}
 
+    int m_exitCode;
 private:
 	HANDLE m_log;
+
 };
 
 
@@ -95,16 +111,9 @@ int main()
 	if(argc<2){
 		printHelp();
 	}
-	wchar_t  *program = argv[1];
-	wchar_t  *arguments = new wchar_t[MAX_PATH *2];
-	VSDImp vsdimp(arguments,argv,argc);
 
-	VSDProcess p(program,arguments,&vsdimp);
-	delete [] arguments;
 
-	unsigned long exitCode = p.run();
-	std::wcout<<p.program()<<p.arguments()<<L" Exited with status: "<<exitCode<<std::endl;
-
-	return exitCode;
+    VSDImp vsdimp(argv,argc);
+    return vsdimp.m_exitCode;
 }
 

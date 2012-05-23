@@ -41,6 +41,7 @@ namespace libvsd {
 		~VSDProcess();
 
 		int run();
+        void debugSubProcess(bool b);
 		const wchar_t *program() const;
 		const wchar_t *arguments() const;
 

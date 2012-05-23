@@ -27,7 +27,9 @@
 #include <iostream>
 
 #include <stdlib.h>
+#include <map>
 
+#define VSD_BUFLEN 4096
 
 //inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp
 using namespace libvsd;
@@ -58,10 +60,12 @@ public:
 	};
 
 	PrivateVSDProcess(const wchar_t *program,const wchar_t * arguments,VSDClient *client)
-		:m_client(client)
-		,m_program(SysAllocString(program))
-		,m_arguments(SysAllocString(arguments))
-	{
+        :m_client(client)
+        ,m_program(SysAllocString(program))
+        ,m_arguments(SysAllocString(arguments))
+        ,m_run(true)
+        ,m_exitCode(0)
+    {
 
 		SECURITY_ATTRIBUTES sa = {0};
 		sa.nLength = sizeof(sa);
@@ -87,6 +91,12 @@ public:
 	{
 		SysFreeString(m_program);
 		SysFreeString(m_arguments);
+
+        std::map<unsigned long,wchar_t*>::iterator it;
+        for ( it = m_processNames.begin() ; it != m_processNames.end(); it++ )
+            SysFreeString((*it).second);
+        m_processNames.clear();
+
 	}
 
 	bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
@@ -133,69 +143,112 @@ public:
 	void readDebugMSG(DEBUG_EVENT &debugEvent){
 		OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
 
-		wchar_t *msg = new wchar_t[DebugString.nDebugStringLength];
-		ReadProcessMemory(m_pi.hProcess,DebugString.lpDebugStringData,msg,DebugString.nDebugStringLength, NULL);
-
+        HANDLE processHandle = m_pi.hProcess;
+        if(debugEvent.dwProcessId != m_pi.dwProcessId)
+            processHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, debugEvent.dwProcessId);
 
 		if ( DebugString.fUnicode ){
-			m_client->write(msg);
+            ReadProcessMemory(processHandle,DebugString.lpDebugStringData,m_wcharBuffer2,DebugString.nDebugStringLength, NULL);
+            wcscpy(m_wcharBuffer,m_processNames[debugEvent.dwProcessId]);
+            wcscat(m_wcharBuffer,L" ");
+            wcscat(m_wcharBuffer,m_wcharBuffer2);
 		}else{
-			wchar_t *message = new wchar_t[DebugString.nDebugStringLength];
-			MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (char*)msg, -1, message, DebugString.nDebugStringLength+1);
-			m_client->write(message);
-			delete [] message;
+            ReadProcessMemory(processHandle,DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
+            MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer2, DebugString.nDebugStringLength+1);
+            wcscpy(m_wcharBuffer,m_processNames[debugEvent.dwProcessId]);
+            wcscat(m_wcharBuffer,L" ");
+            wcscat(m_wcharBuffer,m_wcharBuffer2);
 		}
-		delete [] msg;
-
+        m_client->write(m_wcharBuffer);
+        if(processHandle != m_pi.hProcess)
+            CloseHandle(processHandle);
 	}
+
+    void readProcessCreated(DEBUG_EVENT &debugEvent){
+        GetFinalPathNameByHandle(debugEvent.u.CreateProcessInfo.hFile,m_wcharBuffer2,VSD_BUFLEN,FILE_NAME_OPENED);
+        wcscpy(m_wcharBuffer,L"Process Created: ");
+        wcscat(m_wcharBuffer,m_wcharBuffer2+4);
+        wcscat(m_wcharBuffer,L"\r\n");
+        m_processNames[debugEvent.dwProcessId] = SysAllocString(m_wcharBuffer2+findLastBackslash(m_wcharBuffer2));
+        m_client->write(m_wcharBuffer);
+    }
+
+    void readProcessExited(DEBUG_EVENT &debugEvent){
+        wcscpy(m_wcharBuffer,L"Process Stopped: ");
+        wcscat(m_wcharBuffer,m_processNames[debugEvent.dwProcessId]);
+        wcscat(m_wcharBuffer,L" With exit Code: ");
+        _itow_s(debugEvent.u.ExitProcess.dwExitCode,m_wcharBuffer2,VSD_BUFLEN,10);
+        wcscat(m_wcharBuffer,m_wcharBuffer2);
+        wcscat(m_wcharBuffer,L"\r\n");
+        m_client->write(m_wcharBuffer);
+        if(debugEvent.dwProcessId == m_pi.dwProcessId){
+            m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
+            m_run = false;
+        }else{
+            SysFreeString(m_processNames[debugEvent.dwProcessId]);
+            m_processNames.erase(debugEvent.dwProcessId);
+        }
+    }
+
+    void readOutput(){
+        BOOL bSuccess = FALSE;
+        DWORD dwRead;
+        bSuccess = PeekNamedPipe(m_stdout.hRead, NULL, 0, NULL, &dwRead, NULL);
+        if(bSuccess && dwRead>0){//TODO:detect if I get wchar_t or char from the subprocess
+            if(ReadFile(m_stdout.hRead, m_charBuffer,dwRead,NULL,&m_stdout.overlapped)){
+                MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, dwRead+1);
+                wcscpy(m_wcharBuffer+dwRead,L"\0");
+                wcscat(m_wcharBuffer,L"\r\n");
+                m_client->write(m_wcharBuffer);
+            }
+        }
+    }
+
+    long findLastBackslash(const wchar_t *in){
+        for(int i=wcslen(in);i>0;--i){
+            if(in[i] == '\\')
+                return i+1;
+        }
+    }
+
+
 
 	int run(){
 
-		if(!CreateProcess ( m_program, m_arguments, NULL, NULL, TRUE, DEBUG_ONLY_THIS_PROCESS, NULL,NULL,&m_si, &m_pi )){
+        unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
+        if(m_debugSubProcess)
+            debugConfig = DEBUG_PROCESS;
+        if(!CreateProcess ( m_program, m_arguments, NULL, NULL, TRUE,debugConfig, NULL,NULL,&m_si, &m_pi )){
 			return -1;
 		}
 
-		DEBUG_EVENT debug_event = {0};
-		unsigned long exitCode = 0;
-		bool run = true;
-		const size_t buflen = 4096;
-		char chBuf[buflen];
-		wchar_t chwBuf[buflen];
-		BOOL bSuccess = FALSE;
-		DWORD dwRead;
+        DEBUG_EVENT debug_event = {0};
 
-
-		while(run)
-		{
-			bSuccess = PeekNamedPipe(m_stdout.hRead, NULL, 0, NULL, &dwRead, NULL);
-			if(bSuccess && dwRead>0){//TODO:detect if I get wchar_t or char from the subprocess
-				if(ReadFile(m_stdout.hRead, chBuf,dwRead,NULL,&m_stdout.overlapped)){
-					MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, chBuf, -1, chwBuf, dwRead+1);
-					wcscpy(chwBuf+dwRead,L"\0");
-					m_client->write(chwBuf);
-				}
-			}
-			if (WaitForDebugEvent(&debug_event,500)){
+        while(m_run)
+        {
+            readOutput();
+            if (WaitForDebugEvent(&debug_event,500)){
 				switch(debug_event.dwDebugEventCode){
 				case  OUTPUT_DEBUG_STRING_EVENT:
 					readDebugMSG(debug_event);
 					break;
+                case CREATE_PROCESS_DEBUG_EVENT:
+                    readProcessCreated(debug_event);
+                    break;
 				case EXIT_PROCESS_DEBUG_EVENT:
-					exitCode = debug_event.u.ExitProcess.dwExitCode;
-					run = false;
-					break;
+                    readProcessExited(debug_event);
+                    break;
 				default:
 					break;
 				}
 			}
-
 			ContinueDebugEvent(debug_event.dwProcessId,debug_event.dwThreadId,DBG_CONTINUE);
 		}
 
 
 		CloseHandle( m_pi.hProcess );
 		CloseHandle( m_pi.hThread );
-		return exitCode;
+        return m_exitCode;
 	}
 
 
@@ -203,10 +256,20 @@ public:
 	VSDClient *m_client;
 	wchar_t *m_program;
 	wchar_t *m_arguments;
+    bool m_debugSubProcess;
+
+    //not thrad safe
+    char m_charBuffer[VSD_BUFLEN];
+    wchar_t m_wcharBuffer[VSD_BUFLEN];
+    wchar_t m_wcharBuffer2[VSD_BUFLEN];
+    bool m_run;
+    unsigned long m_exitCode;
 
 	STARTUPINFO m_si; 
 	PROCESS_INFORMATION m_pi; 
 	Pipe m_stdout;
+
+    std::map <unsigned long,wchar_t*> m_processNames;
 };
 
 VSDClient::VSDClient()
@@ -238,6 +301,10 @@ int VSDProcess::run()
 }
 
 
+void VSDProcess::debugSubProcess(bool b)
+{
+    d->m_debugSubProcess = b;
+}
 
 const wchar_t *VSDProcess::program() const
 {
