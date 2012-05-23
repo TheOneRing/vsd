@@ -168,7 +168,7 @@ public:
         GetFinalPathNameByHandle(debugEvent.u.CreateProcessInfo.hFile,m_wcharBuffer2,VSD_BUFLEN,FILE_NAME_OPENED);
         wcscpy(m_wcharBuffer,L"Process Created: ");
         wcscat(m_wcharBuffer,m_wcharBuffer2+4);
-        wcscat(m_wcharBuffer,L"\r\n");
+        wcscat(m_wcharBuffer,L"\n");
         m_processNames[debugEvent.dwProcessId] = SysAllocString(m_wcharBuffer2+findLastBackslash(m_wcharBuffer2));
         m_client->write(m_wcharBuffer);
     }
@@ -179,7 +179,7 @@ public:
         wcscat(m_wcharBuffer,L" With exit Code: ");
         _itow_s(debugEvent.u.ExitProcess.dwExitCode,m_wcharBuffer2,VSD_BUFLEN,10);
         wcscat(m_wcharBuffer,m_wcharBuffer2);
-        wcscat(m_wcharBuffer,L"\r\n");
+        wcscat(m_wcharBuffer,L"\n");
         m_client->write(m_wcharBuffer);
         if(debugEvent.dwProcessId == m_pi.dwProcessId){
             m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
@@ -200,7 +200,7 @@ public:
             if(ReadFile(m_stdout.hRead, m_charBuffer,dwRead,NULL,&m_stdout.overlapped)){
                 MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, dwRead+1);
                 wcscpy(m_wcharBuffer+dwRead,L"\0");
-                wcscat(m_wcharBuffer,L"\r\n");
+                wcscat(m_wcharBuffer,L"\n");
                 m_client->write(m_wcharBuffer);
             }
         }
@@ -252,6 +252,7 @@ public:
         CloseHandle( m_pi.hThread );
         return m_exitCode;
     }
+
 
 
 
