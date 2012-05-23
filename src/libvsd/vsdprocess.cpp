@@ -92,9 +92,13 @@ public:
         SysFreeString(m_program);
         SysFreeString(m_arguments);
 
-        std::map<unsigned long,wchar_t*>::iterator it;
-        for ( it = m_processNames.begin() ; it != m_processNames.end(); it++ )
+        for(std::map<unsigned long,wchar_t*>::iterator it = m_processNames.begin() ; it != m_processNames.end(); it++ )
             SysFreeString((*it).second);
+        m_processNames.clear();
+
+
+        for(std::map<unsigned long,HANDLE>::iterator it = m_processHandles.begin() ; it != m_processHandles.end(); it++ )
+            CloseHandle((*it).second);
         m_processNames.clear();
 
     }
@@ -143,28 +147,24 @@ public:
     void readDebugMSG(DEBUG_EVENT &debugEvent){
         OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
 
-        HANDLE processHandle = m_pi.hProcess;
-        if(debugEvent.dwProcessId != m_pi.dwProcessId)
-            processHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, debugEvent.dwProcessId);
-
         if ( DebugString.fUnicode ){
-            ReadProcessMemory(processHandle,DebugString.lpDebugStringData,m_wcharBuffer2,DebugString.nDebugStringLength, NULL);
+            ReadProcessMemory(m_processHandles[debugEvent.dwProcessId],DebugString.lpDebugStringData,m_wcharBuffer2,DebugString.nDebugStringLength, NULL);
             wcscpy(m_wcharBuffer,m_processNames[debugEvent.dwProcessId]);
             wcscat(m_wcharBuffer,L" ");
             wcscat(m_wcharBuffer,m_wcharBuffer2);
         }else{
-            ReadProcessMemory(processHandle,DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
+            ReadProcessMemory(m_processHandles[debugEvent.dwProcessId],DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
             MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer2, DebugString.nDebugStringLength+1);
             wcscpy(m_wcharBuffer,m_processNames[debugEvent.dwProcessId]);
             wcscat(m_wcharBuffer,L" ");
             wcscat(m_wcharBuffer,m_wcharBuffer2);
         }
         m_client->write(m_wcharBuffer);
-        if(processHandle != m_pi.hProcess)
-            CloseHandle(processHandle);
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
+        m_processHandles[debugEvent.dwProcessId] = OpenProcess(PROCESS_ALL_ACCESS, FALSE, debugEvent.dwProcessId);
+
         GetFinalPathNameByHandle(debugEvent.u.CreateProcessInfo.hFile,m_wcharBuffer2,VSD_BUFLEN,FILE_NAME_OPENED);
         wcscpy(m_wcharBuffer,L"Process Created: ");
         wcscat(m_wcharBuffer,m_wcharBuffer2+4);
@@ -188,6 +188,8 @@ public:
             SysFreeString(m_processNames[debugEvent.dwProcessId]);
             m_processNames.erase(debugEvent.dwProcessId);
         }
+        CloseHandle(m_processHandles[debugEvent.dwProcessId]);
+        m_processHandles.erase(debugEvent.dwProcessId);
     }
 
     void readOutput(){
@@ -270,6 +272,7 @@ public:
     Pipe m_stdout;
 
     std::map <unsigned long,wchar_t*> m_processNames;
+    std::map <unsigned long,HANDLE> m_processHandles;
 };
 
 VSDClient::VSDClient()
