@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <map>
+#include <time.h>
 
 #define VSD_BUFLEN 4096
 
@@ -170,6 +171,7 @@ public:
         wcscat(m_wcharBuffer,m_wcharBuffer2+4);
         wcscat(m_wcharBuffer,L"\n");
         m_processNames[debugEvent.dwProcessId] = SysAllocString(m_wcharBuffer2+findLastBackslash(m_wcharBuffer2));
+        m_processStartTime[debugEvent.dwProcessId] = time(NULL);
         m_client->write(m_wcharBuffer);
     }
 
@@ -179,7 +181,10 @@ public:
         wcscat(m_wcharBuffer,L" With exit Code: ");
         _itow_s(debugEvent.u.ExitProcess.dwExitCode,m_wcharBuffer2,VSD_BUFLEN,10);
         wcscat(m_wcharBuffer,m_wcharBuffer2);
-        wcscat(m_wcharBuffer,L"\n");
+        wcscat(m_wcharBuffer,L" After: ");
+        _itow_s(time(NULL)- m_processStartTime[debugEvent.dwProcessId],m_wcharBuffer2,VSD_BUFLEN,10);
+        wcscat(m_wcharBuffer,m_wcharBuffer2);
+        wcscat(m_wcharBuffer,L" seconds\n");
         m_client->write(m_wcharBuffer);
         if(debugEvent.dwProcessId == m_pi.dwProcessId){
             m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
@@ -187,6 +192,7 @@ public:
         }else{
             SysFreeString(m_processNames[debugEvent.dwProcessId]);
             m_processNames.erase(debugEvent.dwProcessId);
+            m_processStartTime.erase(debugEvent.dwProcessId);
         }
         CloseHandle(m_processHandles[debugEvent.dwProcessId]);
         m_processHandles.erase(debugEvent.dwProcessId);
@@ -273,6 +279,7 @@ public:
     Pipe m_stdout;
 
     std::map <unsigned long,wchar_t*> m_processNames;
+    std::map <unsigned long,time_t> m_processStartTime;
     std::map <unsigned long,HANDLE> m_processHandles;
 };
 
