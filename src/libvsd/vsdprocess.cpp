@@ -20,7 +20,7 @@
 
 
 #include "vsdprocess.h"
-#include "vsdcompat.h"
+#include "vsdchildprocess.h"
 
 #include <windows.h>
 #include <winbase.h>
@@ -31,6 +31,11 @@
 #include <time.h>
 
 #define VSD_BUFLEN 4096
+
+#ifdef __MINGW64_VERSION_MAJOR
+    #define PIPE_REJECT_REMOTE_CLIENTS 0x00000008
+#endif
+
 
 //inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp
 using namespace libvsd;
@@ -93,14 +98,14 @@ public:
         SysFreeString(m_program);
         SysFreeString(m_arguments);
 
-        for(std::map<unsigned long,wchar_t*>::iterator it = m_processNames.begin() ; it != m_processNames.end(); it++ )
-            SysFreeString((*it).second);
-        m_processNames.clear();
+        for(std::map<unsigned long,VSDChildProcess*>::iterator it = m_children.begin() ; it != m_children.end(); it++ )
+        {
+            delete ((*it).second);
+        }
+        m_children.clear();
 
 
-        for(std::map<unsigned long,HANDLE>::iterator it = m_processHandles.begin() ; it != m_processHandles.end(); it++ )
-            CloseHandle((*it).second);
-        m_processNames.clear();
+
 
     }
 
@@ -146,56 +151,36 @@ public:
     }
 
     void readDebugMSG(DEBUG_EVENT &debugEvent){
+        VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
 
         if ( DebugString.fUnicode ){
-            ReadProcessMemory(m_processHandles[debugEvent.dwProcessId],DebugString.lpDebugStringData,m_wcharBuffer2,DebugString.nDebugStringLength, NULL);
-            wcscpy(m_wcharBuffer,m_processNames[debugEvent.dwProcessId]);
-            wcscat(m_wcharBuffer,L" ");
-            wcscat(m_wcharBuffer,m_wcharBuffer2);
+            ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_wcharBuffer2,DebugString.nDebugStringLength, NULL);
         }else{
-            ReadProcessMemory(m_processHandles[debugEvent.dwProcessId],DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
+            ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
             MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer2, DebugString.nDebugStringLength+1);
-            wcscpy(m_wcharBuffer,m_processNames[debugEvent.dwProcessId]);
-            wcscat(m_wcharBuffer,L" ");
-            wcscat(m_wcharBuffer,m_wcharBuffer2);
         }
+        swprintf(m_wcharBuffer, L"%c[%dm %s %s",0x1B,32,child->name(),m_wcharBuffer2);
         m_client->write(m_wcharBuffer);
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
-        m_processHandles[debugEvent.dwProcessId] = OpenProcess(PROCESS_ALL_ACCESS, FALSE, debugEvent.dwProcessId);
-
-        GetFinalPathNameByHandle(debugEvent.u.CreateProcessInfo.hFile,m_wcharBuffer2,VSD_BUFLEN,FILE_NAME_OPENED);
-        wcscpy(m_wcharBuffer,L"Process Created: ");
-        wcscat(m_wcharBuffer,m_wcharBuffer2+4);
-        wcscat(m_wcharBuffer,L"\n");
-        m_processNames[debugEvent.dwProcessId] = SysAllocString(m_wcharBuffer2+findLastBackslash(m_wcharBuffer2));
-        m_processStartTime[debugEvent.dwProcessId] = time(NULL);
+        VSDChildProcess *child = new VSDChildProcess(debugEvent.dwProcessId,debugEvent.u.CreateProcessInfo.hFile);
+        m_children[debugEvent.dwProcessId] = child;
+         swprintf(m_wcharBuffer,L"Process Created: %s\n",child->path());
         m_client->write(m_wcharBuffer);
     }
 
     void readProcessExited(DEBUG_EVENT &debugEvent){
-        wcscpy(m_wcharBuffer,L"Process Stopped: ");
-        wcscat(m_wcharBuffer,m_processNames[debugEvent.dwProcessId]);
-        wcscat(m_wcharBuffer,L" With exit Code: ");
-        _itow_s(debugEvent.u.ExitProcess.dwExitCode,m_wcharBuffer2,VSD_BUFLEN,10);
-        wcscat(m_wcharBuffer,m_wcharBuffer2);
-        wcscat(m_wcharBuffer,L" After: ");
-        _itow_s(time(NULL)- m_processStartTime[debugEvent.dwProcessId],m_wcharBuffer2,VSD_BUFLEN,10);
-        wcscat(m_wcharBuffer,m_wcharBuffer2);
-        wcscat(m_wcharBuffer,L" seconds\n");
+        VSDChildProcess *child = m_children[debugEvent.dwProcessId];
+        swprintf(m_wcharBuffer, L"Process Stopped: %s With exit Code: %i After: %.2lf seconds\n", child->path(),debugEvent.u.ExitProcess.dwExitCode,child->time());
         m_client->write(m_wcharBuffer);
         if(debugEvent.dwProcessId == m_pi.dwProcessId){
             m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
             m_run = false;
-        }else{
-            SysFreeString(m_processNames[debugEvent.dwProcessId]);
-            m_processNames.erase(debugEvent.dwProcessId);
-            m_processStartTime.erase(debugEvent.dwProcessId);
         }
-        CloseHandle(m_processHandles[debugEvent.dwProcessId]);
-        m_processHandles.erase(debugEvent.dwProcessId);
+        m_children.erase(child->id());
+        delete child;
     }
 
     void readOutput(){
@@ -212,12 +197,7 @@ public:
         }
     }
 
-    long findLastBackslash(const wchar_t *in){
-        for(int i=wcslen(in);i>0;--i){
-            if(in[i] == '\\')
-                return i+1;
-        }
-    }
+
 
 
 
@@ -278,9 +258,7 @@ public:
     PROCESS_INFORMATION m_pi;
     Pipe m_stdout;
 
-    std::map <unsigned long,wchar_t*> m_processNames;
-    std::map <unsigned long,time_t> m_processStartTime;
-    std::map <unsigned long,HANDLE> m_processHandles;
+    std::map <unsigned long,VSDChildProcess*> m_children;
 };
 
 VSDClient::VSDClient()

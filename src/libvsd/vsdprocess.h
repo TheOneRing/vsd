@@ -26,6 +26,7 @@
 #include <windows.h>
 
 namespace libvsd {
+
 class LIBVSD_EXPORT VSDClient
 {
 public:
