@@ -24,7 +24,7 @@
 #include <tchar.h>
 
 #include "libvsd/vsdprocess.h"
-
+#include "libvsd/vsdchildprocess.h"
 
 using namespace libvsd;
 
@@ -93,6 +93,18 @@ public:
             WriteFile(m_log,data,wcslen(data)*sizeof(wchar_t),&dwRead,NULL);
         }
     }
+
+    void processStarted(const VSDChildProcess *process)
+    {
+        std::wcout<<L"Process Created: "<<process->path()<<std::endl;
+    }
+
+    void processStopped(const VSDChildProcess *process)
+    {
+        std::wcout<<L"Process Stopped: "<<process->path()<<" With exit Code: "<<process->exitCode()<<" After: "<<process->time()<<" seconds"<<std::endl;;
+    }
+
+
 
     int m_exitCode;
 private:

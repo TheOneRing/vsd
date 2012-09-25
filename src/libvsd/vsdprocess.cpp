@@ -103,10 +103,6 @@ public:
             delete ((*it).second);
         }
         m_children.clear();
-
-
-
-
     }
 
     bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
@@ -160,21 +156,20 @@ public:
             ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
             MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer2, DebugString.nDebugStringLength+1);
         }
-        swprintf(m_wcharBuffer, L"%c[%dm %s %s",0x1B,32,child->name(),m_wcharBuffer2);
+        swprintf(m_wcharBuffer, L"%s %s",child->name(),m_wcharBuffer2);
         m_client->write(m_wcharBuffer);
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = new VSDChildProcess(debugEvent.dwProcessId,debugEvent.u.CreateProcessInfo.hFile);
         m_children[debugEvent.dwProcessId] = child;
-         swprintf(m_wcharBuffer,L"Process Created: %s\n",child->path());
-        m_client->write(m_wcharBuffer);
+        m_client->processStarted(child);
     }
 
     void readProcessExited(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
-        swprintf(m_wcharBuffer, L"Process Stopped: %s With exit Code: %i After: %.2lf seconds\n", child->path(),debugEvent.u.ExitProcess.dwExitCode,child->time());
-        m_client->write(m_wcharBuffer);
+        child->processStopped(debugEvent.u.ExitProcess.dwExitCode);
+        m_client->processStopped(child);
         if(debugEvent.dwProcessId == m_pi.dwProcessId){
             m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
             m_run = false;

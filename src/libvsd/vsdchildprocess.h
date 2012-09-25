@@ -20,6 +20,9 @@ public:
     const wchar_t *name() const;
     const double time() const;
     const unsigned long id() const;
+    const int exitCode() const;
+
+    void processStopped(const int exitCode);
 
 private:
     long findLastBackslash(const wchar_t *in);
@@ -29,6 +32,9 @@ private:
     wchar_t* m_name;
     unsigned long m_id;
     time_t m_startTime;
+    double m_duration;
+    int m_exitCode;
+    bool m_stopped;
 
 };
 

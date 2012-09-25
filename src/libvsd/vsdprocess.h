@@ -27,12 +27,16 @@
 
 namespace libvsd {
 
+class VSDChildProcess;
+
 class LIBVSD_EXPORT VSDClient
 {
 public:
     VSDClient();
     ~VSDClient();
     virtual void write(const wchar_t *data) = 0;
+    virtual void processStarted(const VSDChildProcess* process) = 0;
+    virtual void processStopped(const VSDChildProcess* process) = 0;
 };
 
 class LIBVSD_EXPORT VSDProcess
