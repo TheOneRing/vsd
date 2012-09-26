@@ -70,7 +70,7 @@ public:
         ,m_program(SysAllocString(program))
         ,m_arguments(SysAllocString(arguments))
         ,m_run(true)
-        ,m_exitCode(0)
+        ,m_exitCode(STILL_ACTIVE)
     {
 
         SECURITY_ATTRIBUTES sa = {0};
@@ -97,12 +97,6 @@ public:
     {
         SysFreeString(m_program);
         SysFreeString(m_arguments);
-
-        for(std::map<unsigned long,VSDChildProcess*>::iterator it = m_children.begin() ; it != m_children.end(); it++ )
-        {
-            delete ((*it).second);
-        }
-        m_children.clear();
     }
 
     bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
@@ -228,6 +222,12 @@ public:
         }
 
 
+        for(std::map<unsigned long,VSDChildProcess*>::iterator it = m_children.begin() ; it != m_children.end(); it++ )
+        {
+            delete ((*it).second);
+        }
+        m_children.clear();
+
         CloseHandle( m_pi.hProcess );
         CloseHandle( m_pi.hThread );
         return m_exitCode;
@@ -281,6 +281,11 @@ VSDProcess::~VSDProcess()
 int VSDProcess::run()
 {
     return d->run();
+}
+
+void VSDProcess::stop()
+{
+    d->m_run = false;
 }
 
 

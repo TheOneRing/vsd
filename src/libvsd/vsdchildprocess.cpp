@@ -16,7 +16,7 @@ VSDChildProcess::VSDChildProcess(const unsigned long id, const HANDLE fileHandle
     ,m_handle(OpenProcess(PROCESS_ALL_ACCESS, FALSE, id))
     ,m_startTime(::time(NULL))
     ,m_duration(0)
-    ,m_exitCode(0)
+    ,m_exitCode(STILL_ACTIVE)
     ,m_stopped(false)
 {
     wchar_t buff[VSD_BUFLEN];
@@ -28,6 +28,14 @@ VSDChildProcess::VSDChildProcess(const unsigned long id, const HANDLE fileHandle
 
 VSDChildProcess::~VSDChildProcess()
 {
+
+    if(m_exitCode == STILL_ACTIVE)
+    {
+        std::wcerr<<"Killing "<<path()<<" subprocess"<<std::endl;
+        TerminateProcess(handle(), 0);
+        m_exitCode = -1;
+    }
+
     SysFreeString(m_name);
     SysFreeString(m_path);
     CloseHandle(m_handle);

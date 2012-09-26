@@ -48,6 +48,7 @@ public:
     ~VSDProcess();
 
     int run();
+    void stop();
     void debugSubProcess(bool b);
     const wchar_t *program() const;
     const wchar_t *arguments() const;

@@ -23,6 +23,7 @@
 #include <fstream>
 #include <stdlib.h>
 #include <wchar.h>
+#include <signal.h>
 
 #include "libvsd/vsdprocess.h"
 #include "libvsd/vsdchildprocess.h"
@@ -49,7 +50,7 @@ public:
         wchar_t  *program = in[1];
         wchar_t  *arguments = new wchar_t[MAX_PATH];
         bool withSubProcess = false;
-        wcscpy(arguments,L"\0");
+        wcscpy(arguments,L" \0");
         for(int i=1;i<len;++i){
             if(wcscmp(in[i],L"--vsdlog")==0){
                 if(i+1<=len){
@@ -77,26 +78,35 @@ public:
         swprintf_s(m_wcharBuffer,L"%ws %ws\n",program,arguments);
         print(m_wcharBuffer);
 
-        VSDProcess p(program,arguments,this);
+        m_process = new VSDProcess(program,arguments,this);
         delete [] arguments;
-        p.debugSubProcess(withSubProcess);
-        m_exitCode = p.run();
+        m_process->debugSubProcess(withSubProcess);
 
-        SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-        swprintf_s(m_wcharBuffer,L"%ws %ws Exited with status: %i\n",p.program(),p.arguments(),m_exitCode);
-        print(m_wcharBuffer);
+
+
 
 
     }
 
-
     ~VSDImp()
     {
+        m_process->stop();
+        SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        swprintf_s(m_wcharBuffer,L"%ws %ws Exited with status: %i\n",m_process->program(),m_process->arguments(),m_exitCode);
+        print(m_wcharBuffer);
+
+        delete m_process;
         if(m_log != INVALID_HANDLE_VALUE){
             CloseHandle(m_log);
         }
         SetConsoleTextAttribute( m_hout, m_consoleSettings.wAttributes );
         CloseHandle(m_hout);
+    }
+
+    void run()
+    {
+        m_exitCode = m_process->run();
+
     }
 
     void print(const wchar_t* data)
@@ -144,6 +154,7 @@ public:
 
     int m_exitCode;
 private:
+    VSDProcess *m_process;
     HANDLE m_log;
     wchar_t m_wcharBuffer[VSDBUFF_SIZE ];
     HANDLE m_hout;
@@ -152,7 +163,18 @@ private:
 };
 
 
+static VSDImp *vsdimp = NULL;
 
+void sighandler(int sig)
+{
+
+    if(vsdimp != NULL)
+    {
+        delete vsdimp;
+        vsdimp = NULL;
+    }
+	exit(0);
+}
 
 
 int main()
@@ -163,8 +185,17 @@ int main()
         printHelp();
     }
 
+    vsdimp = new VSDImp(argv,argc);
 
-    VSDImp vsdimp(argv,argc);
-    return vsdimp.m_exitCode;
+    signal(SIGABRT, &sighandler);
+    signal(SIGTERM, &sighandler);
+    signal(SIGINT, &sighandler);
+
+    vsdimp->run();
+
+    int ret = vsdimp->m_exitCode;
+    delete vsdimp;
+    vsdimp = NULL;
+    return ret;
 }
 
