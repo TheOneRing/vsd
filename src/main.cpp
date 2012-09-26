@@ -121,20 +121,20 @@ public:
     void writeDebug(const VSDChildProcess *process,const wchar_t *data)
     {
         SetConsoleTextAttribute( m_hout, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-        swprintf(m_wcharBuffer, L"%ls: %ls", process->name(), data);
+        swprintf_s(m_wcharBuffer, L"%ws: %ws", process->name(), data);
         print(m_wcharBuffer);
     }
     void processStarted(const VSDChildProcess *process)
     {
         SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-        swprintf(m_wcharBuffer,L"Process Created: %ls \n", process->path());
+        swprintf_s(m_wcharBuffer,L"Process Created: %ws \n", process->path());
         print(m_wcharBuffer);
     }
 
     void processStopped(const VSDChildProcess *process)
     {
         SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-        swprintf(m_wcharBuffer, L"Process Stopped: %ls  With exit Code: %i  After: %d seconds\n", process->path(), process->exitCode(), process->time());
+        swprintf_s(m_wcharBuffer, L"Process Stopped: %ws  With exit Code: %i  After: %d seconds\n", process->path(), process->exitCode(), process->time());
         print(m_wcharBuffer);
     }
 
