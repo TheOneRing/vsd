@@ -74,7 +74,8 @@ public:
         GetConsoleScreenBufferInfo( m_hout, &m_consoleSettings);
 
         SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-        std::wcout<<program<<arguments<<std::endl;
+        swprintf_s(m_wcharBuffer,L"%ws %ws\n",program,arguments);
+        print(m_wcharBuffer);
 
         VSDProcess p(program,arguments,this);
         delete [] arguments;
@@ -82,7 +83,8 @@ public:
         m_exitCode = p.run();
 
         SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-        std::wcout<<p.program()<<p.arguments()<<L" Exited with status: "<<m_exitCode<<std::endl;
+        swprintf_s(m_wcharBuffer,L"%ws %ws Exited with status: %i\n",p.program(),p.arguments(),m_exitCode);
+        print(m_wcharBuffer);
 
 
     }
