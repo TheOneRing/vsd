@@ -40,7 +40,7 @@ const HANDLE &VSDChildProcess::handle() const
 
 const wchar_t *VSDChildProcess::path() const
 {
-    return m_name;
+    return m_path;
 }
 
 const wchar_t *VSDChildProcess::name() const

@@ -151,13 +151,12 @@ public:
         OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
 
         if ( DebugString.fUnicode ){
-            ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_wcharBuffer2,DebugString.nDebugStringLength, NULL);
+            ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_wcharBuffer,DebugString.nDebugStringLength, NULL);
         }else{
             ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
-            MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer2, DebugString.nDebugStringLength+1);
-        }
-        swprintf(m_wcharBuffer, L"%s %s",child->name(),m_wcharBuffer2);
-        m_client->write(m_wcharBuffer);
+            MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, DebugString.nDebugStringLength+1);
+        }        
+        m_client->writeDebug(child,m_wcharBuffer);
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
@@ -187,7 +186,7 @@ public:
                 MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, dwRead+1);
                 wcscpy(m_wcharBuffer+dwRead,L"\0");
                 wcscat(m_wcharBuffer,L"\n");
-                m_client->write(m_wcharBuffer);
+                m_client->writeStdout(m_wcharBuffer);
             }
         }
     }
@@ -269,7 +268,7 @@ VSDClient::~VSDClient()
 VSDProcess::VSDProcess(const wchar_t *program,const wchar_t * arguments,VSDClient *client)
     :d(new PrivateVSDProcess(program,arguments,client))
 {
-    std::wcout<<d->m_program<<d->m_arguments<<std::endl;
+
 
 }
 

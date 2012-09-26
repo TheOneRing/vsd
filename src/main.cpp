@@ -21,14 +21,15 @@
 #include <windows.h>
 #include <iostream>
 #include <fstream>
-#include <tchar.h>
+#include <stdlib.h>
+#include <wchar.h>
 
 #include "libvsd/vsdprocess.h"
 #include "libvsd/vsdchildprocess.h"
 
 using namespace libvsd;
 
-
+#define VSDBUFF_SIZE 4096
 
 void printHelp(){
     std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<
@@ -69,11 +70,21 @@ public:
             }
         }
 
+        m_hout = GetStdHandle( STD_OUTPUT_HANDLE  );
+        GetConsoleScreenBufferInfo( m_hout, &m_consoleSettings);
+
+        SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        std::wcout<<program<<arguments<<std::endl;
+
         VSDProcess p(program,arguments,this);
         delete [] arguments;
         p.debugSubProcess(withSubProcess);
         m_exitCode = p.run();
+
+        SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
         std::wcout<<p.program()<<p.arguments()<<L" Exited with status: "<<m_exitCode<<std::endl;
+
+
     }
 
 
@@ -82,26 +93,49 @@ public:
         if(m_log != INVALID_HANDLE_VALUE){
             CloseHandle(m_log);
         }
+        SetConsoleTextAttribute( m_hout, m_consoleSettings.wAttributes );
+        CloseHandle(m_hout);
     }
 
-    void write(const wchar_t *data)
+    void print(const wchar_t* data)
     {
         std::wcout<<data;
         if(m_log != INVALID_HANDLE_VALUE){
-            size_t len = wcslen(data);
             DWORD dwRead;
-            WriteFile(m_log,data,wcslen(data)*sizeof(wchar_t),&dwRead,NULL);
+            WriteFile(m_log,data, wcslen(data) * sizeof(wchar_t), &dwRead,NULL);
         }
     }
 
+    void writeStdout(const wchar_t *data)
+    {
+        SetConsoleTextAttribute( m_hout, m_consoleSettings.wAttributes );
+        print(data);
+    }
+
+    void writeErr(const wchar_t *data)
+    {
+        SetConsoleTextAttribute( m_hout, FOREGROUND_RED);
+        print(data);
+    }
+
+    void writeDebug(const VSDChildProcess *process,const wchar_t *data)
+    {
+        SetConsoleTextAttribute( m_hout, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        swprintf(m_wcharBuffer, L"%ls: %ls", process->name(), data);
+        print(m_wcharBuffer);
+    }
     void processStarted(const VSDChildProcess *process)
     {
-        std::wcout<<L"Process Created: "<<process->path()<<std::endl;
+        SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        swprintf(m_wcharBuffer,L"Process Created: %ls \n", process->path());
+        print(m_wcharBuffer);
     }
 
     void processStopped(const VSDChildProcess *process)
     {
-        std::wcout<<L"Process Stopped: "<<process->path()<<" With exit Code: "<<process->exitCode()<<" After: "<<process->time()<<" seconds"<<std::endl;;
+        SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        swprintf(m_wcharBuffer, L"Process Stopped: %ls  With exit Code: %i  After: %d seconds\n", process->path(), process->exitCode(), process->time());
+        print(m_wcharBuffer);
     }
 
 
@@ -109,6 +143,9 @@ public:
     int m_exitCode;
 private:
     HANDLE m_log;
+    wchar_t m_wcharBuffer[VSDBUFF_SIZE ];
+    HANDLE m_hout;
+    CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
 
 };
 
