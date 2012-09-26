@@ -29,7 +29,7 @@ VSDChildProcess::VSDChildProcess(const unsigned long id, const HANDLE fileHandle
 VSDChildProcess::~VSDChildProcess()
 {
 
-    if(m_exitCode == STILL_ACTIVE)
+    if(!m_stopped)
     {
         std::wcerr<<"Killing "<<path()<<" subprocess"<<std::endl;
         TerminateProcess(handle(), 0);

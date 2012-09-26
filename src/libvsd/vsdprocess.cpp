@@ -42,8 +42,9 @@ using namespace libvsd;
 
 class VSDProcess::PrivateVSDProcess{
 public:
-    struct Pipe
+    class Pipe
     {
+    public:
         Pipe()
             : hWrite(INVALID_HANDLE_VALUE)
             , hRead(INVALID_HANDLE_VALUE)
@@ -59,6 +60,12 @@ public:
             if (hRead != INVALID_HANDLE_VALUE)
                 CloseHandle(hRead);
         }
+
+        bool operator ==( const Pipe& p) const
+        {
+            return this->hWrite == p.hWrite && this->hRead == p.hRead;
+        }
+
 
         HANDLE hWrite;
         HANDLE hRead;
@@ -79,7 +86,12 @@ public:
 
 
         if (!setupPipe(m_stdout, &sa)){
-            std::wcerr<<L"Cannot setup pipe for sout."<<std::endl;
+            std::wcerr<<L"Cannot setup pipe for stdout."<<std::endl;
+            exit(1);
+        }
+
+        if (!setupPipe(m_stderr, &sa)){
+            std::wcerr<<L"Cannot setup pipe for stderr."<<std::endl;
             exit(1);
         }
 
@@ -87,7 +99,7 @@ public:
         m_si.cb = sizeof(m_si);
         m_si.dwFlags |= STARTF_USESTDHANDLES;
         m_si.hStdOutput = m_stdout.hWrite;
-        m_si.hStdError =  m_stdout.hWrite;
+        m_si.hStdError =  m_stderr.hWrite;
 
         ZeroMemory( &m_pi, sizeof(m_pi) );
 
@@ -171,16 +183,20 @@ public:
         delete child;
     }
 
-    void readOutput(){
+    void readOutput(Pipe &p){
         BOOL bSuccess = FALSE;
         DWORD dwRead;
-        bSuccess = PeekNamedPipe(m_stdout.hRead, NULL, 0, NULL, &dwRead, NULL);
+        bSuccess = PeekNamedPipe(p.hRead, NULL, 0, NULL, &dwRead, NULL);
         if(bSuccess && dwRead>0){//TODO:detect if I get wchar_t or char from the subprocess
-            if(ReadFile(m_stdout.hRead, m_charBuffer,dwRead,NULL,&m_stdout.overlapped)){
+            if(ReadFile(p.hRead, m_charBuffer,dwRead,NULL,&p.overlapped)){
                 MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, dwRead+1);
                 wcscpy(m_wcharBuffer+dwRead,L"\0");
                 wcscat(m_wcharBuffer,L"\n");
-                m_client->writeStdout(m_wcharBuffer);
+                if(p == m_stdout)
+                    m_client->writeStdout(m_wcharBuffer);
+                else
+                    m_client->writeErr(m_wcharBuffer);
+
             }
         }
     }
@@ -202,7 +218,8 @@ public:
 
         while(m_run)
         {
-            readOutput();
+            readOutput(m_stdout);
+            readOutput(m_stderr);
             if (WaitForDebugEvent(&debug_event,500)){
                 switch(debug_event.dwDebugEventCode){
                 case  OUTPUT_DEBUG_STRING_EVENT:
@@ -251,6 +268,7 @@ public:
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
     Pipe m_stdout;
+    Pipe m_stderr;
 
     std::map <unsigned long,VSDChildProcess*> m_children;
 };
