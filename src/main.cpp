@@ -49,25 +49,32 @@ public:
     {
         wchar_t  *program = in[1];
         wchar_t  *arguments = new wchar_t[MAX_PATH];
-        bool withSubProcess = false;
+        bool withSubProcess = false;        
         wcscpy(arguments,L" \0");
-        for(int i=1;i<len;++i){
-            if(wcscmp(in[i],L"--vsdlog")==0){
-                if(i+1<=len){
+
+        for(int i=1;i<len;++i)
+        {
+            if(wcscmp(in[i],L"--vsdlog")==0)
+            {
+                if(i+1<=len)
+                {
                     i++;
                     m_log = CreateFile(in[i++],GENERIC_WRITE,FILE_SHARE_READ,NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
-                }else{
+                }
+                else
+                {
                     printHelp();
                 }
-            }else  if(wcscmp(in[i],L"--vsdall")==0){
+            }else  if(wcscmp(in[i],L"--vsdall")==0)
+            {
                 withSubProcess = true;
-
-            }else  if(wcscmp(in[i],L"--help")==0){
+            }
+            else  if(wcscmp(in[i],L"--help")==0)
+            {
                 printHelp();
-            }else if(i>1){
-                wcscat(arguments,L" \"");
-                wcscat(arguments,in[i]);
-                wcscat(arguments,L"\"");
+            }else if(i>1)
+            {
+                swprintf_s(arguments,MAX_PATH,L"\"%ws\" ",in[i]);
             }
         }
 

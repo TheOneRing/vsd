@@ -85,12 +85,14 @@ public:
         sa.bInheritHandle = TRUE;
 
 
-        if (!setupPipe(m_stdout, &sa)){
+        if (!setupPipe(m_stdout, &sa))
+        {
             std::wcerr<<L"Cannot setup pipe for stdout."<<std::endl;
             exit(1);
         }
 
-        if (!setupPipe(m_stderr, &sa)){
+        if (!setupPipe(m_stderr, &sa)
+                ){
             std::wcerr<<L"Cannot setup pipe for stderr."<<std::endl;
             exit(1);
         }
@@ -156,17 +158,21 @@ public:
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
 
-        if ( DebugString.fUnicode ){
+
+        if ( DebugString.fUnicode )
+        {
             ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_wcharBuffer,DebugString.nDebugStringLength, NULL);
-        }else{
+        }
+        else
+        {
             ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
             MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, DebugString.nDebugStringLength+1);
-        }        
+        }
         m_client->writeDebug(child,m_wcharBuffer);
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
-        VSDChildProcess *child = new VSDChildProcess(debugEvent.dwProcessId,debugEvent.u.CreateProcessInfo.hFile);
+        VSDChildProcess *child = new VSDChildProcess( debugEvent.dwProcessId, debugEvent.u.CreateProcessInfo.hFile);
         m_children[debugEvent.dwProcessId] = child;
         m_client->processStarted(child);
     }
@@ -175,7 +181,8 @@ public:
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         child->processStopped(debugEvent.u.ExitProcess.dwExitCode);
         m_client->processStopped(child);
-        if(debugEvent.dwProcessId == m_pi.dwProcessId){
+        if(debugEvent.dwProcessId == m_pi.dwProcessId)
+        {
             m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
             m_run = false;
         }
@@ -187,11 +194,13 @@ public:
         BOOL bSuccess = FALSE;
         DWORD dwRead;
         bSuccess = PeekNamedPipe(p.hRead, NULL, 0, NULL, &dwRead, NULL);
-        if(bSuccess && dwRead>0){//TODO:detect if I get wchar_t or char from the subprocess
-            if(ReadFile(p.hRead, m_charBuffer,dwRead,NULL,&p.overlapped)){
+        if(bSuccess && dwRead>0)
+        {
+            if(ReadFile(p.hRead, m_charBuffer, dwRead ,NULL, &p.overlapped))
+            {
                 MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, dwRead+1);
-                wcscpy(m_wcharBuffer+dwRead,L"\0");
-                wcscat(m_wcharBuffer,L"\n");
+                swprintf_s(m_wcharBuffer, L"%ws\n", m_wcharBuffer);//TODO:detect if I get wchar_t or char from the subprocess
+
                 if(p == m_stdout)
                     m_client->writeStdout(m_wcharBuffer);
                 else
@@ -235,7 +244,7 @@ public:
                     break;
                 }
             }
-            ContinueDebugEvent(debug_event.dwProcessId,debug_event.dwThreadId,DBG_CONTINUE);
+            ContinueDebugEvent(debug_event.dwProcessId, debug_event.dwThreadId, DBG_CONTINUE);
         }
 
 
@@ -270,7 +279,7 @@ public:
     Pipe m_stdout;
     Pipe m_stderr;
 
-    std::map <unsigned long,VSDChildProcess*> m_children;
+    std::map <unsigned long, VSDChildProcess*> m_children;
 };
 
 VSDClient::VSDClient()
