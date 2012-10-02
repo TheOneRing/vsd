@@ -91,8 +91,8 @@ public:
             exit(1);
         }
 
-        if (!setupPipe(m_stderr, &sa)
-                ){
+        if (!setupPipe(m_stderr, &sa))
+        {
             std::wcerr<<L"Cannot setup pipe for stderr."<<std::endl;
             exit(1);
         }

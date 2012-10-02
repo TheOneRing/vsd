@@ -35,8 +35,9 @@ using namespace libvsd;
 void printHelp(){
     std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<
                 std::endl<<L"Options:"<<
-                std::endl<<L"--vsdlog logFile\t File to log VSD output to"<<
-                std::endl<<L"--vsdall\t\t Debug also all processes created by TARGET_APPLICATION"<<
+                std::endl<<L"--vsd-log logFile\t File to log VSD output to"<<
+                std::endl<<L"--vsd-all\t\t Debug also all processes created by TARGET_APPLICATION"<<
+                std::endl<<L"--vsd-nc \t\t Monochrome output"<<
                 std::endl<<L"--help \t\t\t print this help";
     exit(0);
 }
@@ -46,28 +47,34 @@ public:
     VSDImp(wchar_t *in[],int len)
         :m_exitCode(0)
         ,m_log(INVALID_HANDLE_VALUE)
+        ,m_colored(true)
     {
         wchar_t  *program = in[1];
         wchar_t  *arguments = new wchar_t[MAX_PATH];
-        bool withSubProcess = false;        
-        wcscpy(arguments,L" \0");
+        bool withSubProcess = false;
+        swprintf_s(arguments,MAX_PATH,L" ");
 
         for(int i=1;i<len;++i)
         {
-            if(wcscmp(in[i],L"--vsdlog")==0)
+            if(wcscmp(in[i],L"--vsd-log")==0)
             {
                 if(i+1<=len)
                 {
                     i++;
-                    m_log = CreateFile(in[i++],GENERIC_WRITE,FILE_SHARE_READ,NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+                    m_log = CreateFile(in[i++], GENERIC_WRITE, FILE_SHARE_READ, NULL,CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
                 }
                 else
                 {
                     printHelp();
                 }
-            }else  if(wcscmp(in[i],L"--vsdall")==0)
+            }
+            else  if(wcscmp(in[i],L"--vsd-all")==0)
             {
                 withSubProcess = true;
+            }
+            else  if(wcscmp(in[i],L"--vsd-nc")==0)
+            {
+                m_colored = false;
             }
             else  if(wcscmp(in[i],L"--help")==0)
             {
@@ -81,26 +88,20 @@ public:
         m_hout = GetStdHandle( STD_OUTPUT_HANDLE  );
         GetConsoleScreenBufferInfo( m_hout, &m_consoleSettings);
 
-        SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-        swprintf_s(m_wcharBuffer,L"%ws %ws\n",program,arguments);
-        print(m_wcharBuffer);
+        swprintf_s(m_wcharBuffer,L"%ws %ws\n", program,arguments);
+        print(m_wcharBuffer, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
-        m_process = new VSDProcess(program,arguments,this);
+        m_process = new VSDProcess(program, arguments,this);
         delete [] arguments;
         m_process->debugSubProcess(withSubProcess);
-
-
-
-
 
     }
 
     ~VSDImp()
     {
         m_process->stop();
-        SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-        swprintf_s(m_wcharBuffer,L"%ws %ws Exited with status: %i\n",m_process->program(),m_process->arguments(),m_exitCode);
-        print(m_wcharBuffer);
+        swprintf_s(m_wcharBuffer,L"%ws %ws Exited with status: %i\n", m_process->program(), m_process->arguments(), m_exitCode);
+        print(m_wcharBuffer, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
         delete m_process;
         if(m_log != INVALID_HANDLE_VALUE){
@@ -116,8 +117,10 @@ public:
 
     }
 
-    void print(const wchar_t* data)
+    void print(const wchar_t* data,WORD color)
     {
+        if( m_colored )
+            SetConsoleTextAttribute( m_hout, color);
         std::wcout<<data;
         if(m_log != INVALID_HANDLE_VALUE){
             DWORD dwRead;
@@ -127,34 +130,29 @@ public:
 
     void writeStdout(const wchar_t *data)
     {
-        SetConsoleTextAttribute( m_hout, m_consoleSettings.wAttributes );
-        print(data);
+        print(data, m_consoleSettings.wAttributes);
     }
 
     void writeErr(const wchar_t *data)
     {
-        SetConsoleTextAttribute( m_hout, FOREGROUND_RED);
-        print(data);
+        print(data, FOREGROUND_RED);
     }
 
     void writeDebug(const VSDChildProcess *process,const wchar_t *data)
     {
-        SetConsoleTextAttribute( m_hout, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
         swprintf_s(m_wcharBuffer, L"%ws: %ws", process->name(), data);
-        print(m_wcharBuffer);
+        print(m_wcharBuffer, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
     }
     void processStarted(const VSDChildProcess *process)
     {
-        SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
         swprintf_s(m_wcharBuffer,L"Process Created: %ws \n", process->path());
-        print(m_wcharBuffer);
+        print(m_wcharBuffer, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
     void processStopped(const VSDChildProcess *process)
     {
-        SetConsoleTextAttribute( m_hout, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
         swprintf_s(m_wcharBuffer, L"Process Stopped: %ws  With exit Code: %i  After: %d seconds\n", process->path(), process->exitCode(), process->time());
-        print(m_wcharBuffer);
+        print(m_wcharBuffer,  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
 
@@ -166,6 +164,7 @@ private:
     wchar_t m_wcharBuffer[VSDBUFF_SIZE ];
     HANDLE m_hout;
     CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
+    bool m_colored;
 
 };
 
@@ -180,7 +179,7 @@ void sighandler(int sig)
         delete vsdimp;
         vsdimp = NULL;
     }
-	exit(0);
+    exit(0);
 }
 
 
