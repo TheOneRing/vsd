@@ -48,6 +48,7 @@ public:
         :m_exitCode(0)
         ,m_log(INVALID_HANDLE_VALUE)
         ,m_colored(true)
+        ,m_html(true)
     {
         wchar_t  *program = in[1];
         wchar_t  *arguments = new wchar_t[MAX_PATH];
@@ -88,10 +89,11 @@ public:
         m_hout = GetStdHandle( STD_OUTPUT_HANDLE  );
         GetConsoleScreenBufferInfo( m_hout, &m_consoleSettings);
 
-        swprintf_s(m_wcharBuffer,L"%ws %ws\n", program,arguments);
+        htmlHEADER(program, arguments);
+        swprintf_s(m_wcharBuffer,L"%ws %ws\n", program, arguments);
         print(m_wcharBuffer, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
-        m_process = new VSDProcess(program, arguments,this);
+        m_process = new VSDProcess(program, arguments, this);
         delete [] arguments;
         m_process->debugSubProcess(withSubProcess);
 
@@ -105,6 +107,7 @@ public:
 
         delete m_process;
         if(m_log != INVALID_HANDLE_VALUE){
+            htmlFOOTER();
             CloseHandle(m_log);
         }
         SetConsoleTextAttribute( m_hout, m_consoleSettings.wAttributes );
@@ -117,15 +120,69 @@ public:
 
     }
 
+    void htmlHEADER(const wchar_t *program,const wchar_t *arguments)
+    {
+        //        if(!m_html)
+        //            return;
+        swprintf_s(m_wcharBuffer,L"<!DOCTYPE html>\n<html>\n<head>\n<title>%ws %ws</title>\n</head>\n\n<body>", program, arguments);
+        printFile(m_wcharBuffer,0);
+    }
+
+    void htmlFOOTER()
+    {
+        if(!m_html)
+            return;
+        swprintf_s(m_wcharBuffer,L"</body>\n\n</html>\n");
+        printFile(m_wcharBuffer,0);
+    }
+
+    void printFile(const wchar_t* data,WORD color)
+    {
+        if(m_log == INVALID_HANDLE_VALUE)
+            return;
+        wchar_t tag[20];
+        DWORD dwRead;
+        if(m_html)
+        {
+            switch(color)
+            {
+            case FOREGROUND_BLUE:
+            case FOREGROUND_BLUE | FOREGROUND_INTENSITY:
+                swprintf_s(tag,L"blue");
+                break;
+            case FOREGROUND_GREEN:
+            case FOREGROUND_GREEN | FOREGROUND_INTENSITY:
+                swprintf_s(tag,L"green");
+                break;
+            case FOREGROUND_RED:
+            case FOREGROUND_RED | FOREGROUND_INTENSITY:
+                swprintf_s(tag,L"red");
+                break;
+            case 0:
+                WideCharToMultiByte(CP_ACP, 0, data, -1, m_charBuffer, wcslen(data)+1,NULL,NULL);
+                WriteFile(m_log,m_charBuffer, strlen(m_charBuffer) * sizeof(char), &dwRead,NULL);
+                return;
+            default:
+                swprintf_s(tag,L"black");
+            }
+
+            swprintf_s(m_wcharBuffer2,L"<p style=\"color:%ws\">%ws</p>\n", tag, data);
+
+            WideCharToMultiByte(CP_ACP,0, m_wcharBuffer2, -1, m_charBuffer, wcslen(m_wcharBuffer2)+1,NULL,NULL);
+            WriteFile(m_log,m_charBuffer, strlen(m_charBuffer) * sizeof(char), &dwRead,NULL);
+        }
+        else
+        {
+            WriteFile(m_log,data, wcslen(data) * sizeof(wchar_t), &dwRead,NULL);
+        }
+    }
+
     void print(const wchar_t* data,WORD color)
     {
         if( m_colored )
             SetConsoleTextAttribute( m_hout, color);
-        std::wcout<<data;
-        if(m_log != INVALID_HANDLE_VALUE){
-            DWORD dwRead;
-            WriteFile(m_log,data, wcslen(data) * sizeof(wchar_t), &dwRead,NULL);
-        }
+        //        std::wcout<<data;
+        printFile(data,color);
     }
 
     void writeStdout(const wchar_t *data)
@@ -161,10 +218,13 @@ public:
 private:
     VSDProcess *m_process;
     HANDLE m_log;
+    char m_charBuffer[VSDBUFF_SIZE ];
     wchar_t m_wcharBuffer[VSDBUFF_SIZE ];
+    wchar_t m_wcharBuffer2[VSDBUFF_SIZE ];
     HANDLE m_hout;
     CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
     bool m_colored;
+    bool m_html;
 
 };
 
