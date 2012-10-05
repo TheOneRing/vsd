@@ -122,54 +122,59 @@ public:
 
     void htmlHEADER(const wchar_t *program,const wchar_t *arguments)
     {
-        //        if(!m_html)
-        //            return;
-        swprintf_s(m_wcharBuffer,L"<!DOCTYPE html>\n<html>\n<head>\n<title>%ws %ws</title>\n</head>\n\n<body>", program, arguments);
+        if(!m_html)
+            return;
+        printFilePlain("<!DOCTYPE html>\n<html>\n<head>\n<title>");
+        swprintf_s(m_wcharBuffer,L"%ws %ws", program, arguments);
         printFile(m_wcharBuffer,0);
+        printFilePlain("</title>\n<meta charset=\"UTF-8\" />\n</head>\n\n<body>");
+
     }
 
     void htmlFOOTER()
     {
         if(!m_html)
             return;
-        swprintf_s(m_wcharBuffer,L"</body>\n\n</html>\n");
-        printFile(m_wcharBuffer,0);
+        printFilePlain("</body>\n\n</html>\n");
+    }
+
+    void printFilePlain(const char* data)
+    {
+        DWORD dwRead;
+        WriteFile(m_log,data, strlen(data) * sizeof(char), &dwRead,NULL);
     }
 
     void printFile(const wchar_t* data,WORD color)
     {
         if(m_log == INVALID_HANDLE_VALUE)
             return;
-        wchar_t tag[20];
+        char tag[20];
         DWORD dwRead;
-        if(m_html)
+        if(m_html && color != 0)
         {
             switch(color)
             {
             case FOREGROUND_BLUE:
             case FOREGROUND_BLUE | FOREGROUND_INTENSITY:
-                swprintf_s(tag,L"blue");
+                strcpy(tag, "blue\0");
                 break;
             case FOREGROUND_GREEN:
             case FOREGROUND_GREEN | FOREGROUND_INTENSITY:
-                swprintf_s(tag,L"green");
+                strcpy(tag, "green\0");
                 break;
             case FOREGROUND_RED:
             case FOREGROUND_RED | FOREGROUND_INTENSITY:
-                swprintf_s(tag,L"red");
+                strcpy(tag, "red\0");
                 break;
-            case 0:
-                WideCharToMultiByte(CP_ACP, 0, data, -1, m_charBuffer, wcslen(data)+1,NULL,NULL);
-                WriteFile(m_log,m_charBuffer, strlen(m_charBuffer) * sizeof(char), &dwRead,NULL);
-                return;
             default:
-                swprintf_s(tag,L"black");
+                strcpy(tag, "black\0");
             }
-
-            swprintf_s(m_wcharBuffer2,L"<p style=\"color:%ws\">%ws</p>\n", tag, data);
-
-            WideCharToMultiByte(CP_ACP,0, m_wcharBuffer2, -1, m_charBuffer, wcslen(m_wcharBuffer2)+1,NULL,NULL);
-            WriteFile(m_log,m_charBuffer, strlen(m_charBuffer) * sizeof(char), &dwRead,NULL);
+            printFilePlain("<p style=\"color:\0");
+            printFilePlain(tag);
+            printFilePlain("\">\0");
+            swprintf_s(m_wcharBuffer2,L"%ws", data);
+            WriteFile(m_log,m_wcharBuffer2, wcslen(m_wcharBuffer2) * sizeof(wchar_t), &dwRead,NULL);
+            printFilePlain("</p>\n");
         }
         else
         {
@@ -218,7 +223,6 @@ public:
 private:
     VSDProcess *m_process;
     HANDLE m_log;
-    char m_charBuffer[VSDBUFF_SIZE ];
     wchar_t m_wcharBuffer[VSDBUFF_SIZE ];
     wchar_t m_wcharBuffer2[VSDBUFF_SIZE ];
     HANDLE m_hout;
