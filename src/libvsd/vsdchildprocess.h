@@ -25,6 +25,7 @@
 
 #include <windows.h>
 #include <wchar.h>
+#include <chrono>
 
 namespace libvsd
 {
@@ -38,7 +39,7 @@ public:
     const HANDLE& handle() const;
     const wchar_t *path() const;
     const wchar_t *name() const;
-    const double time() const;
+    const std::chrono::high_resolution_clock::duration time() const;
     const unsigned long id() const;
     const int exitCode() const;
 
@@ -51,8 +52,8 @@ private:
     wchar_t* m_path;
     wchar_t* m_name;
     unsigned long m_id;
-    time_t m_startTime;
-    double m_duration;
+    std::chrono::high_resolution_clock::time_point m_startTime;
+    std::chrono::high_resolution_clock::duration m_duration;
     int m_exitCode;
     bool m_stopped;
 

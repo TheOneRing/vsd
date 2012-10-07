@@ -16,7 +16,7 @@ if(STATIC_VSD)
     set(LIBVSD_BUILDTYPE STATIC)
 
     if(MINGW)
-        #set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -std=c++11)
+        set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -std=c++11)
         set(CMAKE_EXE_LINKER_FLAGS ${MAKE_EXE_LINKER_FLAGS} -static )
     endif(MINGW)
     

@@ -22,11 +22,12 @@
 
 #include <windows.h>
 #include <winbase.h>
-#include <time.h>
 
 #include <iostream>
 
 using namespace libvsd;
+
+namespace cr = std::chrono;
 
 #define VSD_BUFLEN 4096
 
@@ -34,8 +35,7 @@ using namespace libvsd;
 VSDChildProcess::VSDChildProcess(const unsigned long id, const HANDLE fileHandle)
     :m_id(id)
     ,m_handle(OpenProcess(PROCESS_ALL_ACCESS, FALSE, id))
-    ,m_startTime(::time(NULL))
-    ,m_duration(0)
+    ,m_startTime(std::chrono::high_resolution_clock::now())
     ,m_exitCode(STILL_ACTIVE)
     ,m_stopped(false)
 {
@@ -76,11 +76,11 @@ const wchar_t *VSDChildProcess::name() const
     return m_name;
 }
 
-const double VSDChildProcess::time() const
+const std::chrono::system_clock::duration VSDChildProcess::time() const
 {
     if(m_stopped)
         return m_duration;
-    return ::difftime(::time(NULL),m_startTime);
+    return  std::chrono::high_resolution_clock::now() - m_startTime;
 }
 
 const unsigned long VSDChildProcess::id() const
@@ -105,6 +105,6 @@ long VSDChildProcess::findLastBackslash(const wchar_t *in)
 void VSDChildProcess::processStopped(const int exitCode)
 {
     m_exitCode = exitCode;
-    m_duration = ::difftime(::time(NULL),m_startTime);
+    m_duration = std::chrono::high_resolution_clock::now() - m_startTime;
     m_stopped = true;
 }

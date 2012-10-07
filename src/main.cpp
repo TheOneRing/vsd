@@ -62,7 +62,7 @@ public:
                 if(i+1<=len)
                 {
                     i++;
-                    m_log = CreateFile(in[i++], GENERIC_WRITE, FILE_SHARE_READ, NULL,CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+                    m_log = CreateFile(in[i], GENERIC_WRITE, FILE_SHARE_READ, NULL,CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
                 }
                 else
                 {
@@ -82,7 +82,7 @@ public:
                 printHelp();
             }else if(i>1)
             {
-                swprintf_s(arguments,MAX_PATH,L"\"%ws\" ",in[i]);
+                swprintf_s(arguments,MAX_PATH,L"%ws \"%ws\" ",arguments,in[i]);
             }
         }
 
@@ -94,9 +94,8 @@ public:
         print(m_wcharBuffer, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
         m_process = new VSDProcess(program, arguments, this);
-        delete [] arguments;
         m_process->debugSubProcess(withSubProcess);
-
+        delete [] arguments;
     }
 
     ~VSDImp()
@@ -124,10 +123,10 @@ public:
     {
         if(!m_html)
             return;
-        printFilePlain("<!DOCTYPE html>\n<html>\n<head>\n<title>");
+        printFilePlain("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\" />\n<title>");
         swprintf_s(m_wcharBuffer,L"%ws %ws", program, arguments);
         printFile(m_wcharBuffer,0);
-        printFilePlain("</title>\n<meta charset=\"UTF-8\" />\n</head>\n\n<body>");
+        printFilePlain("</title>\n</head>\n\n<body>");
 
     }
 
@@ -186,7 +185,7 @@ public:
     {
         if( m_colored )
             SetConsoleTextAttribute( m_hout, color);
-        //        std::wcout<<data;
+        std::wcout<<data;
         printFile(data,color);
     }
 
@@ -213,7 +212,11 @@ public:
 
     void processStopped(const VSDChildProcess *process)
     {
-        swprintf_s(m_wcharBuffer, L"Process Stopped: %ws  With exit Code: %i  After: %d seconds\n", process->path(), process->exitCode(), process->time());
+        swprintf_s(m_wcharBuffer, L"Process Stopped: %ws  With exit Code: %i  After: %i:%i:%lld:%lld \n", process->path(), process->exitCode(),
+                   std::chrono::duration_cast<std::chrono::hours>(process->time()),
+                   std::chrono::duration_cast<std::chrono::minutes>(process->time()),
+                   std::chrono::duration_cast<std::chrono::seconds>(process->time()),
+                   std::chrono::duration_cast<std::chrono::milliseconds>(process->time()));
         print(m_wcharBuffer,  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
