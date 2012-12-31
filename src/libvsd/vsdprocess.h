@@ -24,6 +24,7 @@
 #include "vsd_exports.h"
 
 #include <windows.h>
+#include <sstream>
 
 namespace libvsd {
 
@@ -34,9 +35,9 @@ class LIBVSD_EXPORT VSDClient
 public:
     VSDClient();
     ~VSDClient();
-    virtual void writeStdout(const wchar_t *data) = 0;
-    virtual void writeErr(const wchar_t *data) = 0;
-    virtual void writeDebug(const VSDChildProcess *process,const wchar_t *data) = 0;
+    virtual void writeStdout(const std::wstringstream &data) = 0;
+    virtual void writeErr(const std::wstringstream &data) = 0;
+    virtual void writeDebug(const VSDChildProcess *process,const std::wstringstream &data) = 0;
     virtual void processStarted(const VSDChildProcess* process) = 0;
     virtual void processStopped(const VSDChildProcess* process) = 0;
 };

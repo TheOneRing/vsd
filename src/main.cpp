@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <wchar.h>
 #include <signal.h>
-
+#include <string>
 #include "libvsd/vsdprocess.h"
 #include "libvsd/vsdchildprocess.h"
 
@@ -53,10 +53,8 @@ public:
         ,m_html(true)
     {
         wchar_t  *program = in[1];
-        wchar_t  *arguments = new wchar_t[MAX_PATH];
+        std::wstringstream arguments;
         bool withSubProcess = false;
-        swprintf_s(arguments,MAX_PATH,L" ");
-
         for(int i=1;i<len;++i)
         {
             if(wcscmp(in[i],L"--vsd-log")==0)
@@ -84,7 +82,7 @@ public:
                 printHelp();
             }else if(i>1)
             {
-                swprintf_s(arguments,MAX_PATH,L"%ws \"%ws\" ",arguments,in[i]);
+                arguments<<"\""<<in[i]<<"\" ";
             }
         }
 
@@ -92,12 +90,12 @@ public:
         GetConsoleScreenBufferInfo( m_hout, &m_consoleSettings);
 
         htmlHEADER(program, arguments);
-        swprintf_s(m_wcharBuffer,L"%ws %ws\n", program, arguments);
-        print(m_wcharBuffer, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        std::wstringstream ws;
+        ws<<program<<arguments.str()<<std::endl;
+        print(ws, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
-        m_process = new VSDProcess(program, arguments, this);
+        m_process = new VSDProcess(program, arguments.str().c_str(), this);
         m_process->debugSubProcess(withSubProcess);
-        delete [] arguments;
     }
 
     ~VSDImp()
@@ -118,13 +116,14 @@ public:
 
     }
 
-    void htmlHEADER(const wchar_t *program,const wchar_t *arguments)
+    void htmlHEADER(const wchar_t *program,const std::wstringstream &arguments)
     {
         if(!m_html)
             return;
         printFilePlain("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\" />\n<title>");
-        swprintf_s(m_wcharBuffer,L"%ws %ws", program, arguments);
-        printFile(m_wcharBuffer,0);
+        std::wstringstream ws;
+        ws<<program<<" "<<arguments;
+        printFile(ws,0);
         printFilePlain("</title>\n</head>\n\n<body>");
 
     }
@@ -142,7 +141,7 @@ public:
         WriteFile(m_log,data, strlen(data) * sizeof(char), &dwRead,NULL);
     }
 
-    void printFile(const wchar_t* data,WORD color)
+    void printFile(const std::wstringstream &data,WORD color)
     {
         if(m_log == INVALID_HANDLE_VALUE)
             return;
@@ -170,56 +169,63 @@ public:
             printFilePlain("<p style=\"color:\0");
             printFilePlain(tag);
             printFilePlain("\">\0");
-            swprintf_s(m_wcharBuffer2,L"%ws", data);
-            WriteFile(m_log,m_wcharBuffer2, wcslen(m_wcharBuffer2) * sizeof(wchar_t), &dwRead,NULL);
+            WriteFile(m_log,data.str().c_str(), data.str().size()* sizeof(wchar_t), &dwRead,NULL);
             printFilePlain("</p>\n");
         }
         else
         {
-            WriteFile(m_log,data, wcslen(data) * sizeof(wchar_t), &dwRead,NULL);
+            WriteFile(m_log,data.str().c_str(), data.str().size()* sizeof(wchar_t), &dwRead,NULL);
         }
     }
 
-    void print(const wchar_t* data,WORD color)
+    void print(const std::wstringstream &data,WORD color)
     {        
         static std::mutex mutex;
         std::lock_guard<std::mutex> lock(mutex);
         if( m_colored )
             SetConsoleTextAttribute( m_hout, color);
-        std::wcout<<data;
+        std::wcout<<data.str();
         std::wcout.flush();
         printFile(data,color);
     }
 
-    void writeStdout(const wchar_t *data)
+    void writeStdout(const std::wstringstream &data)
     {
         print(data, m_consoleSettings.wAttributes);
     }
 
-    void writeErr(const wchar_t *data)
+    void writeErr(const std::wstringstream &data)
     {
         print(data, FOREGROUND_RED);
     }
 
-    void writeDebug(const VSDChildProcess *process,const wchar_t *data)
+    void writeDebug(const VSDChildProcess *process,const std::wstringstream &data)
     {
-        swprintf_s(m_wcharBuffer, L"%ws: %ws", process->name(), data);
-        print(m_wcharBuffer, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        std::wstringstream ws;
+        ws<<process->name()<<": "<<data.str();
+        print(ws, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
     }
     void processStarted(const VSDChildProcess *process)
     {
-        swprintf_s(m_wcharBuffer,L"Process Created: %ws \n", process->path());
-        print(m_wcharBuffer, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        std::wstringstream ws;
+        ws<<"Process Created: "<<process->path()<<std::endl;
+        print(ws, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
     void processStopped(const VSDChildProcess *process)
     {
-        swprintf_s(m_wcharBuffer, L"Process Stopped: %ws  With exit Code: %i  After: %i:%i:%lld:%lld \n", process->path(), process->exitCode(),
-                   std::chrono::duration_cast<std::chrono::hours>(process->time()),
-                   std::chrono::duration_cast<std::chrono::minutes>(process->time()),
-                   std::chrono::duration_cast<std::chrono::seconds>(process->time()),
-                   std::chrono::duration_cast<std::chrono::milliseconds>(process->time()));
-        print(m_wcharBuffer,  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        std::wstringstream ws;
+        ws<<"Process Stopped: "
+        <<process->path()
+        <<"  With exit Code: "
+        << process->exitCode()
+        <<"  After: "
+        <<std::chrono::duration_cast<std::chrono::hours>(process->time()).count()<<":"
+        <<std::chrono::duration_cast<std::chrono::minutes>(process->time()).count()<<":"
+        <<std::chrono::duration_cast<std::chrono::seconds>(process->time()).count()<<":"
+        <<std::chrono::duration_cast<std::chrono::milliseconds>(process->time()).count()
+        <<std::endl;
+        print(ws,  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
 
@@ -232,8 +238,6 @@ public:
 private:
     VSDProcess *m_process;
     HANDLE m_log;
-    wchar_t m_wcharBuffer[VSDBUFF_SIZE ];
-    wchar_t m_wcharBuffer2[VSDBUFF_SIZE ];
     HANDLE m_hout;
     CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
     bool m_colored;
@@ -247,7 +251,6 @@ static VSDImp *vsdimp = NULL;
 
 void sighandler(int sig)
 {
-
     if(vsdimp != NULL)
     {
         vsdimp->stop();

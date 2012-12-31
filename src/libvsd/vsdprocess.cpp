@@ -25,11 +25,11 @@
 #include <windows.h>
 #include <winbase.h>
 #include <iostream>
+#include <sstream>
 
 #include <stdlib.h>
 #include <map>
 #include <time.h>
-#include <algorithm>
 
 #define VSD_BUFLEN 4096
 
@@ -171,7 +171,9 @@ public:
             ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
             MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, DebugString.nDebugStringLength+1);
         }
-        m_client->writeDebug(child,m_wcharBuffer);
+        std::wstringstream ws;
+        ws<<m_wcharBuffer;
+        m_client->writeDebug(child,ws);
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
@@ -197,12 +199,13 @@ public:
             if(ReadFile(p.hRead, m_charBuffer, dwRead ,NULL, &p.overlapped))
             {
                 MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, dwRead+1);
-                swprintf_s(m_wcharBuffer, L"%ws\n", m_wcharBuffer);//TODO:detect if I get wchar_t or char from the subprocess
+                std::wstringstream ws;
+                ws<<m_wcharBuffer<<std::endl;//TODO:detect if I get wchar_t or char from the subprocess
 
                 if(p == m_stdout)
-                    m_client->writeStdout(m_wcharBuffer);
+                    m_client->writeStdout(ws);
                 else
-                    m_client->writeErr(m_wcharBuffer);
+                    m_client->writeErr(ws);
 
             }
         }
@@ -270,20 +273,15 @@ public:
         EnumWindows(shutdown, m_pi.dwProcessId );
         if(WaitForSingleObject(SHUTDOWN_EVENT,50) != WAIT_OBJECT_0)
         {
-            m_client->writeErr(L"Failed to post WM_CLOSE message");
-            FormatMessage(
-                        FORMAT_MESSAGE_FROM_SYSTEM |
-                        FORMAT_MESSAGE_IGNORE_INSERTS,
-                        NULL,
-                        GetLastError(),
-                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                        m_wcharBuffer2,
-                        0, NULL );
-            m_client->writeErr(m_wcharBuffer2);
+            std::wstringstream ws;
+            ws<<"Failed to post WM_CLOSE message";
+            m_client->writeErr(ws);
         }
         if(FAILED(PostThreadMessage(m_pi.dwThreadId, WM_CLOSE , 0, 0)))
         {
-            m_client->writeErr(L"Failed to post thred message");
+            std::wstringstream ws;
+            ws<<"Failed to post thred message";
+            m_client->writeErr(ws);
         }
 
 //        if(WaitForSingleObject(m_pi.hProcess,1000) == WAIT_TIMEOUT)
