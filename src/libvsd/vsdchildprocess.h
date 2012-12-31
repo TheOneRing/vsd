@@ -29,11 +29,12 @@
 
 namespace libvsd
 {
+class VSDClient;
 
 class LIBVSD_EXPORT VSDChildProcess
 {
 public:
-    VSDChildProcess(const unsigned long id,const HANDLE fileHandle);
+    VSDChildProcess(VSDClient *client, const unsigned long id, const HANDLE fileHandle);
     ~VSDChildProcess();
 
     const HANDLE& handle() const;
@@ -44,10 +45,12 @@ public:
     const int exitCode() const;
 
     void processStopped(const int exitCode);
+    void stop();
 
 private:
     long findLastBackslash(const wchar_t *in);
 
+    VSDClient  *m_client;
     HANDLE m_handle;
     wchar_t* m_path;
     wchar_t* m_name;
@@ -56,6 +59,7 @@ private:
     std::chrono::high_resolution_clock::duration m_duration;
     int m_exitCode;
     bool m_stopped;
+
 
 };
 

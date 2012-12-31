@@ -28,6 +28,8 @@
 #include "libvsd/vsdprocess.h"
 #include "libvsd/vsdchildprocess.h"
 
+#include <mutex>
+
 using namespace libvsd;
 
 #define VSDBUFF_SIZE 4096
@@ -100,9 +102,6 @@ public:
 
     ~VSDImp()
     {
-        m_process->stop();
-        swprintf_s(m_wcharBuffer,L"%ws %ws Exited with status: %i\n", m_process->program(), m_process->arguments(), m_exitCode);
-        print(m_wcharBuffer, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
         delete m_process;
         if(m_log != INVALID_HANDLE_VALUE){
@@ -182,10 +181,13 @@ public:
     }
 
     void print(const wchar_t* data,WORD color)
-    {
+    {        
+        static std::mutex mutex;
+        std::lock_guard<std::mutex> lock(mutex);
         if( m_colored )
             SetConsoleTextAttribute( m_hout, color);
         std::wcout<<data;
+        std::wcout.flush();
         printFile(data,color);
     }
 
@@ -221,6 +223,10 @@ public:
     }
 
 
+    void stop()
+    {
+        m_process->stop();
+    }
 
     int m_exitCode;
 private:
@@ -233,6 +239,7 @@ private:
     bool m_colored;
     bool m_html;
 
+
 };
 
 
@@ -243,10 +250,8 @@ void sighandler(int sig)
 
     if(vsdimp != NULL)
     {
-        delete vsdimp;
-        vsdimp = NULL;
+        vsdimp->stop();
     }
-    exit(0);
 }
 
 

@@ -19,11 +19,14 @@
 */
 
 #include "vsdchildprocess.h"
+#include "vsdprocess.h"
 
 #include <windows.h>
 #include <winbase.h>
 
 #include <iostream>
+#include <string>
+#include <sstream>
 
 using namespace libvsd;
 
@@ -32,12 +35,13 @@ namespace cr = std::chrono;
 #define VSD_BUFLEN 4096
 
 
-VSDChildProcess::VSDChildProcess(const unsigned long id, const HANDLE fileHandle)
-    :m_id(id)
-    ,m_handle(OpenProcess(PROCESS_ALL_ACCESS, FALSE, id))
-    ,m_startTime(std::chrono::high_resolution_clock::now())
-    ,m_exitCode(STILL_ACTIVE)
-    ,m_stopped(false)
+VSDChildProcess::VSDChildProcess(VSDClient *client, const unsigned long id, const HANDLE fileHandle) :
+    m_client(client),
+    m_id(id),
+    m_handle(OpenProcess(PROCESS_ALL_ACCESS, FALSE, id)),
+    m_startTime(std::chrono::high_resolution_clock::now()),
+    m_exitCode(STILL_ACTIVE),
+    m_stopped(false)
 {
     wchar_t buff[VSD_BUFLEN];
     GetFinalPathNameByHandle(fileHandle,buff,VSD_BUFLEN,FILE_NAME_OPENED);
@@ -48,14 +52,6 @@ VSDChildProcess::VSDChildProcess(const unsigned long id, const HANDLE fileHandle
 
 VSDChildProcess::~VSDChildProcess()
 {
-
-    if(!m_stopped)
-    {
-        std::wcerr<<"Killing "<<path()<<" subprocess"<<std::endl;
-        TerminateProcess(handle(), 0);
-        m_exitCode = -1;
-    }
-
     SysFreeString(m_name);
     SysFreeString(m_path);
     CloseHandle(m_handle);
@@ -107,4 +103,16 @@ void VSDChildProcess::processStopped(const int exitCode)
     m_exitCode = exitCode;
     m_duration = std::chrono::high_resolution_clock::now() - m_startTime;
     m_stopped = true;
+}
+
+void VSDChildProcess::stop()
+{
+    if(!m_stopped)
+    {
+        std::wstringstream ws;
+        ws<<"Killing "<<path()<<" subprocess"<<std::endl;
+        m_client->writeErr(ws.str().c_str());
+        TerminateProcess(handle(), 0);
+        m_exitCode = -1;
+    }
 }

@@ -29,16 +29,19 @@
 #include <stdlib.h>
 #include <map>
 #include <time.h>
+#include <algorithm>
 
 #define VSD_BUFLEN 4096
 
 #ifdef __MINGW64_VERSION_MAJOR
-    #define PIPE_REJECT_REMOTE_CLIENTS 0x00000008
+#define PIPE_REJECT_REMOTE_CLIENTS 0x00000008
 #endif
 
 
 //inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp
 using namespace libvsd;
+
+static HANDLE SHUTDOWN_EVENT = CreateEvent(NULL,false,false,L"SHutdown Event");
 
 class VSDProcess::PrivateVSDProcess{
 public:
@@ -172,7 +175,7 @@ public:
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
-        VSDChildProcess *child = new VSDChildProcess( debugEvent.dwProcessId, debugEvent.u.CreateProcessInfo.hFile);
+        VSDChildProcess *child = new VSDChildProcess( m_client, debugEvent.dwProcessId, debugEvent.u.CreateProcessInfo.hFile);
         m_children[debugEvent.dwProcessId] = child;
         m_client->processStarted(child);
     }
@@ -181,11 +184,6 @@ public:
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         child->processStopped(debugEvent.u.ExitProcess.dwExitCode);
         m_client->processStopped(child);
-        if(debugEvent.dwProcessId == m_pi.dwProcessId)
-        {
-            m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
-            m_run = false;
-        }
         m_children.erase(child->id());
         delete child;
     }
@@ -210,10 +208,6 @@ public:
         }
     }
 
-
-
-
-
     int run(){
 
         unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
@@ -225,8 +219,8 @@ public:
 
         DEBUG_EVENT debug_event = {0};
 
-        while(m_run)
-        {
+
+        do{
             readOutput(m_stdout);
             readOutput(m_stderr);
             if (WaitForDebugEvent(&debug_event,500)){
@@ -245,20 +239,64 @@ public:
                 }
             }
             ContinueDebugEvent(debug_event.dwProcessId, debug_event.dwThreadId, DBG_CONTINUE);
-        }
+        }while(m_children.size()>0);
 
-
-        for(std::map<unsigned long,VSDChildProcess*>::iterator it = m_children.begin() ; it != m_children.end(); it++ )
-        {
-            delete ((*it).second);
-        }
-        m_children.clear();
+        readOutput(m_stdout);
+        readOutput(m_stderr);
 
         CloseHandle( m_pi.hProcess );
         CloseHandle( m_pi.hThread );
         return m_exitCode;
     }
 
+    static BOOL shutdown(HWND hwnd, LPARAM procId)
+    {
+        DWORD currentProcId = 0;
+        GetWindowThreadProcessId(hwnd, &currentProcId);
+        if (currentProcId == (DWORD)procId)
+        {
+            if(SUCCEEDED(PostMessage(hwnd, WM_CLOSE , 0, 0)))
+            {
+                PostMessage(hwnd, WM_QUIT , 0, 0);
+                SetEvent(SHUTDOWN_EVENT);
+            }
+        }
+        return TRUE;
+    }
+
+    void stop()
+    {
+
+        EnumWindows(shutdown, m_pi.dwProcessId );
+        if(WaitForSingleObject(SHUTDOWN_EVENT,50) != WAIT_OBJECT_0)
+        {
+            m_client->writeErr(L"Failed to post WM_CLOSE message");
+            FormatMessage(
+                        FORMAT_MESSAGE_FROM_SYSTEM |
+                        FORMAT_MESSAGE_IGNORE_INSERTS,
+                        NULL,
+                        GetLastError(),
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                        m_wcharBuffer2,
+                        0, NULL );
+            m_client->writeErr(m_wcharBuffer2);
+        }
+        if(FAILED(PostThreadMessage(m_pi.dwThreadId, WM_CLOSE , 0, 0)))
+        {
+            m_client->writeErr(L"Failed to post thred message");
+        }
+
+//        if(WaitForSingleObject(m_pi.hProcess,1000) == WAIT_TIMEOUT)
+//        {
+//            for(auto it : m_children)
+//            {
+//                it.second->stop();
+//                delete it.second;
+
+//            }
+//            m_children.clear();
+//        }
+    }
 
 
 
@@ -312,7 +350,7 @@ int VSDProcess::run()
 
 void VSDProcess::stop()
 {
-    d->m_run = false;
+    d->stop();
 }
 
 
@@ -330,7 +368,4 @@ const wchar_t *VSDProcess::arguments() const
 {
     return d->m_arguments;
 }
-
-
-
 
