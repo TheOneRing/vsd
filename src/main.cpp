@@ -19,12 +19,11 @@
 */
 
 #include <windows.h>
+#include <string>
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
-#include <wchar.h>
 #include <signal.h>
-#include <string>
 #include "libvsd/vsdprocess.h"
 #include "libvsd/vsdchildprocess.h"
 
@@ -94,7 +93,7 @@ public:
         ws<<program<<arguments.str()<<std::endl;
         print(ws, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
-        m_process = new VSDProcess(program, arguments.str().c_str(), this);
+        m_process = new VSDProcess(program, arguments.str(), this);
         m_process->debugSubProcess(withSubProcess);
     }
 
@@ -185,7 +184,6 @@ public:
         if( m_colored )
             SetConsoleTextAttribute( m_hout, color);
         std::wcout<<data.str();
-        std::wcout.flush();
         printFile(data,color);
     }
 

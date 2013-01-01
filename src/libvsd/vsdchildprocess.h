@@ -24,7 +24,7 @@
 #include "vsd_exports.h"
 
 #include <windows.h>
-#include <wchar.h>
+#include <string>
 #include <chrono>
 
 namespace libvsd
@@ -38,8 +38,8 @@ public:
     ~VSDChildProcess();
 
     const HANDLE& handle() const;
-    const wchar_t *path() const;
-    const wchar_t *name() const;
+    const std::wstring &path() const;
+    const std::wstring &name() const;
     const std::chrono::high_resolution_clock::duration time() const;
     const unsigned long id() const;
     const int exitCode() const;
@@ -48,12 +48,10 @@ public:
     void stop();
 
 private:
-    long findLastBackslash(const wchar_t *in);
-
     VSDClient  *m_client;
     HANDLE m_handle;
-    wchar_t* m_path;
-    wchar_t* m_name;
+    std::wstring m_path;
+    std::wstring  m_name;
     unsigned long m_id;
     std::chrono::high_resolution_clock::time_point m_startTime;
     std::chrono::high_resolution_clock::duration m_duration;

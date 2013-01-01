@@ -75,11 +75,10 @@ public:
         OVERLAPPED overlapped;
     };
 
-    PrivateVSDProcess(const wchar_t *program,const wchar_t * arguments,VSDClient *client)
+    PrivateVSDProcess(const std::wstring program,const std::wstring arguments,VSDClient *client)
         :m_client(client)
-        ,m_program(SysAllocString(program))
-        ,m_arguments(SysAllocString(arguments))
-        ,m_run(true)
+        ,m_program(program)
+        ,m_arguments(arguments)
         ,m_exitCode(STILL_ACTIVE)
     {
 
@@ -112,8 +111,6 @@ public:
 
     ~PrivateVSDProcess()
     {
-        SysFreeString(m_program);
-        SysFreeString(m_arguments);
     }
 
     bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
@@ -187,6 +184,13 @@ public:
         child->processStopped(debugEvent.u.ExitProcess.dwExitCode);
         m_client->processStopped(child);
         m_children.erase(child->id());
+        if(m_pi.dwProcessId == child->id())
+        {
+            for(auto it : m_children)//first stop everything and then cleanup
+            {
+                it.second->stop();
+            }
+        }
         delete child;
     }
 
@@ -216,9 +220,20 @@ public:
         unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
         if(m_debugSubProcess)
             debugConfig = DEBUG_PROCESS;
-        if(!CreateProcess ( m_program, m_arguments, NULL, NULL, TRUE,debugConfig, NULL,NULL,&m_si, &m_pi )){
+        wchar_t *program = new wchar_t[m_program.length()];
+        m_program.copy(program,m_program.length());
+        wchar_t *argument =  new wchar_t[m_arguments.length()];
+        m_arguments.copy(argument,m_arguments.length());
+        if(!CreateProcess ( program, argument, NULL, NULL, TRUE,debugConfig, NULL,NULL,&m_si, &m_pi )){
+            std::wstringstream ws;
+            ws<<"Failed to start "<<m_program<<m_arguments<<std::endl;
+            m_client->writeErr(ws);
+            delete [] program;
+            delete [] argument;
             return -1;
         }
+        delete [] program;
+        delete [] argument;
 
         DEBUG_EVENT debug_event = {0};
 
@@ -277,37 +292,31 @@ public:
             ws<<"Failed to post WM_CLOSE message";
             m_client->writeErr(ws);
         }
-        if(FAILED(PostThreadMessage(m_pi.dwThreadId, WM_CLOSE , 0, 0)))
+        if(FAILED(PostThreadMessage(m_pi.dwThreadId, WM_CLOSE , 0, 0)) || FAILED(PostThreadMessage(m_pi.dwThreadId, WM_QUIT , 0, 0)))
         {
             std::wstringstream ws;
             ws<<"Failed to post thred message";
             m_client->writeErr(ws);
         }
 
-//        if(WaitForSingleObject(m_pi.hProcess,1000) == WAIT_TIMEOUT)
-//        {
-//            for(auto it : m_children)
-//            {
-//                it.second->stop();
-//                delete it.second;
-
-//            }
-//            m_children.clear();
-//        }
+        if(WaitForSingleObject(m_pi.hProcess,10000) == WAIT_TIMEOUT)
+        {
+            m_children[m_pi.dwProcessId]->stop();
+        }
     }
 
 
 
     VSDClient *m_client;
-    wchar_t *m_program;
-    wchar_t *m_arguments;
+    std::wstring m_program;
+    std::wstring m_arguments;
     bool m_debugSubProcess;
+    bool m_run;
 
     //not thrad safe
     char m_charBuffer[VSD_BUFLEN];
     wchar_t m_wcharBuffer[VSD_BUFLEN];
     wchar_t m_wcharBuffer2[VSD_BUFLEN];
-    bool m_run;
     unsigned long m_exitCode;
 
     STARTUPINFO m_si;
@@ -328,7 +337,7 @@ VSDClient::~VSDClient()
 
 }
 
-VSDProcess::VSDProcess(const wchar_t *program,const wchar_t * arguments,VSDClient *client)
+VSDProcess::VSDProcess(const std::wstring program,const std::wstring arguments,VSDClient *client)
     :d(new PrivateVSDProcess(program,arguments,client))
 {
 
@@ -357,12 +366,12 @@ void VSDProcess::debugSubProcess(bool b)
     d->m_debugSubProcess = b;
 }
 
-const wchar_t *VSDProcess::program() const
+const std::wstring &VSDProcess::program() const
 {
     return d->m_program;
 }
 
-const wchar_t *VSDProcess::arguments() const
+const std::wstring &VSDProcess::arguments() const
 {
     return d->m_arguments;
 }

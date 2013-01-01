@@ -45,15 +45,12 @@ VSDChildProcess::VSDChildProcess(VSDClient *client, const unsigned long id, cons
 {
     wchar_t buff[VSD_BUFLEN];
     GetFinalPathNameByHandle(fileHandle,buff,VSD_BUFLEN,FILE_NAME_OPENED);
-    m_path = SysAllocString(buff+4);
-    m_name = SysAllocString(m_path+findLastBackslash(m_path));
-
+    m_path = (buff+4);
+    m_name = m_path.substr(m_path.find_last_of('\\')+1);
 }
 
 VSDChildProcess::~VSDChildProcess()
 {
-    SysFreeString(m_name);
-    SysFreeString(m_path);
     CloseHandle(m_handle);
 }
 
@@ -62,12 +59,12 @@ const HANDLE &VSDChildProcess::handle() const
     return m_handle;
 }
 
-const wchar_t *VSDChildProcess::path() const
+const std::wstring &VSDChildProcess::path() const
 {
     return m_path;
 }
 
-const wchar_t *VSDChildProcess::name() const
+const std::wstring &VSDChildProcess::name() const
 {
     return m_name;
 }
@@ -89,13 +86,6 @@ const int VSDChildProcess::exitCode() const
     return m_exitCode;
 }
 
-long VSDChildProcess::findLastBackslash(const wchar_t *in)
-{
-    for(int i=wcslen(in);i>0;--i){
-        if(in[i] == '\\')
-            return i+1;
-    }
-}
 
 
 void VSDChildProcess::processStopped(const int exitCode)

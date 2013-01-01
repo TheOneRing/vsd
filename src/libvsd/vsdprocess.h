@@ -24,6 +24,7 @@
 #include "vsd_exports.h"
 
 #include <windows.h>
+#include <string>
 #include <sstream>
 
 namespace libvsd {
@@ -45,14 +46,14 @@ public:
 class LIBVSD_EXPORT VSDProcess
 {
 public:
-    VSDProcess(const wchar_t *program,const wchar_t * arguments,VSDClient *client);
+    VSDProcess(const std::wstring program,const std::wstring arguments,VSDClient *client);
     ~VSDProcess();
 
     int run();
     void stop();
     void debugSubProcess(bool b);
-    const wchar_t *program() const;
-    const wchar_t *arguments() const;
+    const std::wstring &program() const;
+    const std::wstring &arguments() const;
 
 private:
     class PrivateVSDProcess;
