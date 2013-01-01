@@ -32,8 +32,6 @@
 #include <time.h>
 #include <Shlwapi.h>
 
-#define VSD_BUFLEN 4096
-
 #ifdef __MINGW64_VERSION_MAJOR
 #define PIPE_REJECT_REMOTE_CLIENTS 0x00000008
 #endif
@@ -97,7 +95,7 @@ public:
                 m_client->writeErr(ws.str());
                 return;
             }
-             prog = wprog;
+            prog = wprog;
         }
 
         m_program = prog;
@@ -175,21 +173,27 @@ public:
         return true;
     }
 
+    inline std::wstring toUnicode(char *buff,int len)
+    {
+        wchar_t wcharBuffer[len+1];
+        wcharBuffer[MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, buff, len, wcharBuffer, len )] = 0;
+        return std::wstring(wcharBuffer);
+    }
+
     void readDebugMSG(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
-
+        wchar_t wcharBuffer[DebugString.nDebugStringLength];
+        ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,wcharBuffer,DebugString.nDebugStringLength, NULL);
 
         if ( DebugString.fUnicode )
         {
-            ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_wcharBuffer,DebugString.nDebugStringLength, NULL);
+            m_client->writeDebug(child,wcharBuffer);
         }
         else
         {
-            ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
-            MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, DebugString.nDebugStringLength+1);
+            m_client->writeDebug(child, toUnicode((char*)wcharBuffer,DebugString.nDebugStringLength));
         }
-        m_client->writeDebug(child,m_wcharBuffer);
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
@@ -220,16 +224,15 @@ public:
         bSuccess = PeekNamedPipe(p.hRead, NULL, 0, NULL, &dwRead, NULL);
         if(bSuccess && dwRead>0)
         {
-            if(ReadFile(p.hRead, m_charBuffer, dwRead ,NULL, &p.overlapped))
+            char charBuffer[dwRead+1];
+            if(ReadFile(p.hRead, charBuffer, dwRead ,NULL, &p.overlapped))
             {
-                MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, dwRead+1);
-                std::wstringstream ws;
-                ws<<m_wcharBuffer<<std::endl;//TODO:detect if I get wchar_t or char from the subprocess
-
+                std::wstring out(toUnicode(charBuffer,dwRead));
+                out.append(L"\n");
                 if(p == m_stdout)
-                    m_client->writeStdout(ws.str());
+                    m_client->writeStdout(out);
                 else
-                    m_client->writeErr(ws.str());
+                    m_client->writeErr(out);
 
             }
         }
@@ -326,10 +329,7 @@ public:
     std::wstring m_arguments;
     bool m_debugSubProcess;
 
-    //not thrad safe
-    char m_charBuffer[VSD_BUFLEN];
-    wchar_t m_wcharBuffer[VSD_BUFLEN];
-    wchar_t m_wcharBuffer2[VSD_BUFLEN];
+
     unsigned long m_exitCode;
 
     STARTUPINFO m_si;
