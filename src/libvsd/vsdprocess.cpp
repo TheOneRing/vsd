@@ -184,6 +184,7 @@ public:
         m_children.erase(child->id());
         if(m_pi.dwProcessId == child->id())
         {
+            m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
             for(auto it : m_children)//first stop everything and then cleanup
             {
                 it.second->stop();
