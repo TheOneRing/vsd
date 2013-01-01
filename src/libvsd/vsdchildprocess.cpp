@@ -40,8 +40,7 @@ VSDChildProcess::VSDChildProcess(VSDClient *client, const unsigned long id, cons
     m_id(id),
     m_handle(OpenProcess(PROCESS_ALL_ACCESS, FALSE, id)),
     m_startTime(std::chrono::high_resolution_clock::now()),
-    m_exitCode(STILL_ACTIVE),
-    m_stopped(false)
+    m_exitCode(STILL_ACTIVE)
 {
     wchar_t buff[VSD_BUFLEN];
     GetFinalPathNameByHandle(fileHandle,buff,VSD_BUFLEN,FILE_NAME_OPENED);
@@ -71,7 +70,7 @@ const std::wstring &VSDChildProcess::name() const
 
 const std::chrono::system_clock::duration VSDChildProcess::time() const
 {
-    if(m_stopped)
+    if(m_exitCode != STILL_ACTIVE)
         return m_duration;
     return  std::chrono::high_resolution_clock::now() - m_startTime;
 }
@@ -86,23 +85,19 @@ const int VSDChildProcess::exitCode() const
     return m_exitCode;
 }
 
-
-
 void VSDChildProcess::processStopped(const int exitCode)
 {
     m_exitCode = exitCode;
     m_duration = std::chrono::high_resolution_clock::now() - m_startTime;
-    m_stopped = true;
 }
 
 void VSDChildProcess::stop()
 {
-    if(!m_stopped)
+    if(m_exitCode == STILL_ACTIVE)
     {
         std::wstringstream ws;
         ws<<"Killing "<<path()<<" subprocess"<<std::endl;
         m_client->writeErr(ws.str());
         TerminateProcess(handle(), 0);
-        m_exitCode = -1;
     }
 }

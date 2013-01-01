@@ -51,12 +51,13 @@ public:
         ,m_colored(true)
         ,m_html(true)
     {
-        wchar_t  *program = in[1];
+        std::wstring program(in[1]);
         std::wstringstream arguments;
         bool withSubProcess = false;
         for(int i=1;i<len;++i)
         {
-            if(wcscmp(in[i],L"--vsd-log")==0)
+            std::wstring arg(in[i]);
+            if(arg == L"--vsd-log")
             {
                 if(i+1<=len)
                 {
@@ -68,20 +69,20 @@ public:
                     printHelp();
                 }
             }
-            else  if(wcscmp(in[i],L"--vsd-all")==0)
+            else  if(arg == L"--vsd-all")
             {
                 withSubProcess = true;
             }
-            else  if(wcscmp(in[i],L"--vsd-nc")==0)
+            else  if(arg == L"--vsd-nc")
             {
                 m_colored = false;
             }
-            else  if(wcscmp(in[i],L"--help")==0)
+            else  if(arg == L"--help")
             {
                 printHelp();
             }else if(i>1)
             {
-                arguments<<"\""<<in[i]<<"\" ";
+                arguments<<"\""<<arg<<"\" ";
             }
         }
 
@@ -112,7 +113,6 @@ public:
     void run()
     {
         m_exitCode = m_process->run();
-
     }
 
     void htmlHEADER(const std::wstring &program,const std::wstring &arguments)
@@ -134,40 +134,40 @@ public:
         printFilePlain("</body>\n\n</html>\n");
     }
 
-    void printFilePlain(const char* data)
+    void printFilePlain(const std::string &data)
     {
         DWORD dwRead;
-        WriteFile(m_log,data, strlen(data) * sizeof(char), &dwRead,NULL);
+        WriteFile(m_log,data.c_str(), data.length() * sizeof(char), &dwRead,NULL);
     }
 
     void printFile(const std::wstring &data,WORD color)
     {
         if(m_log == INVALID_HANDLE_VALUE)
             return;
-        char tag[20];
+        std::stringstream ss;
         DWORD dwRead;
         if(m_html && color != 0)
         {
+            ss<<"<p style=\"color:";
             switch(color)
             {
             case FOREGROUND_BLUE:
             case FOREGROUND_BLUE | FOREGROUND_INTENSITY:
-                strcpy(tag, "blue\0");
+                ss<<"blue";
                 break;
             case FOREGROUND_GREEN:
             case FOREGROUND_GREEN | FOREGROUND_INTENSITY:
-                strcpy(tag, "green\0");
+                ss<<"green";
                 break;
             case FOREGROUND_RED:
             case FOREGROUND_RED | FOREGROUND_INTENSITY:
-                strcpy(tag, "red\0");
+                ss<<"red";
                 break;
             default:
-                strcpy(tag, "black\0");
+                ss<<"black";
             }
-            printFilePlain("<p style=\"color:\0");
-            printFilePlain(tag);
-            printFilePlain("\">\0");
+            ss<<"\">";
+            printFilePlain(ss.str());
             WriteFile(m_log,data.c_str(), data.size()* sizeof(wchar_t), &dwRead,NULL);
             printFilePlain("</p>\n");
         }

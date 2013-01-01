@@ -75,7 +75,7 @@ public:
         OVERLAPPED overlapped;
     };
 
-    PrivateVSDProcess(const std::wstring program,const std::wstring arguments,VSDClient *client)
+    PrivateVSDProcess(const std::wstring &program,const std::wstring &arguments,VSDClient *client)
         :m_client(client)
         ,m_program(program)
         ,m_arguments(arguments)
@@ -298,7 +298,6 @@ public:
     std::wstring m_program;
     std::wstring m_arguments;
     bool m_debugSubProcess;
-    bool m_run;
 
     //not thrad safe
     char m_charBuffer[VSD_BUFLEN];
@@ -324,13 +323,11 @@ VSDClient::~VSDClient()
 
 }
 
-VSDProcess::VSDProcess(const std::wstring program,const std::wstring arguments,VSDClient *client)
+VSDProcess::VSDProcess(const std::wstring &program, const std::wstring &arguments, VSDClient *client)
     :d(new PrivateVSDProcess(program,arguments,client))
 {
 
-
 }
-
 
 VSDProcess::~VSDProcess()
 {
@@ -361,5 +358,10 @@ const std::wstring &VSDProcess::program() const
 const std::wstring &VSDProcess::arguments() const
 {
     return d->m_arguments;
+}
+
+int VSDProcess::exitCode() const
+{
+    return d->m_exitCode;
 }
 

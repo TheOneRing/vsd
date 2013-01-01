@@ -46,7 +46,7 @@ public:
 class LIBVSD_EXPORT VSDProcess
 {
 public:
-    VSDProcess(const std::wstring program,const std::wstring arguments,VSDClient *client);
+    VSDProcess(const std::wstring &program,const std::wstring &arguments,VSDClient *client);
     ~VSDProcess();
 
     int run();
@@ -54,6 +54,7 @@ public:
     void debugSubProcess(bool b);
     const std::wstring &program() const;
     const std::wstring &arguments() const;
+    int exitCode() const;
 
 private:
     class PrivateVSDProcess;

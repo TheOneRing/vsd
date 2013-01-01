@@ -56,7 +56,6 @@ private:
     std::chrono::high_resolution_clock::time_point m_startTime;
     std::chrono::high_resolution_clock::duration m_duration;
     int m_exitCode;
-    bool m_stopped;
 
 
 };
