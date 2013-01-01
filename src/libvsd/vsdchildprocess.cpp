@@ -101,7 +101,7 @@ void VSDChildProcess::stop()
     {
         std::wstringstream ws;
         ws<<"Killing "<<path()<<" subprocess"<<std::endl;
-        m_client->writeErr(ws);
+        m_client->writeErr(ws.str());
         TerminateProcess(handle(), 0);
         m_exitCode = -1;
     }

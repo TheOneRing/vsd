@@ -168,9 +168,7 @@ public:
             ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,m_charBuffer,DebugString.nDebugStringLength, NULL);
             MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, m_charBuffer, -1, m_wcharBuffer, DebugString.nDebugStringLength+1);
         }
-        std::wstringstream ws;
-        ws<<m_wcharBuffer;
-        m_client->writeDebug(child,ws);
+        m_client->writeDebug(child,m_wcharBuffer);
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
@@ -207,9 +205,9 @@ public:
                 ws<<m_wcharBuffer<<std::endl;//TODO:detect if I get wchar_t or char from the subprocess
 
                 if(p == m_stdout)
-                    m_client->writeStdout(ws);
+                    m_client->writeStdout(ws.str());
                 else
-                    m_client->writeErr(ws);
+                    m_client->writeErr(ws.str());
 
             }
         }
@@ -220,20 +218,12 @@ public:
         unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
         if(m_debugSubProcess)
             debugConfig = DEBUG_PROCESS;
-        wchar_t *program = new wchar_t[m_program.length()];
-        m_program.copy(program,m_program.length());
-        wchar_t *argument =  new wchar_t[m_arguments.length()];
-        m_arguments.copy(argument,m_arguments.length());
-        if(!CreateProcess ( program, argument, NULL, NULL, TRUE,debugConfig, NULL,NULL,&m_si, &m_pi )){
+        if(!CreateProcess ( (wchar_t*)m_program.c_str(), (wchar_t*)m_arguments.c_str(), NULL, NULL, TRUE,debugConfig, NULL,NULL,&m_si, &m_pi )){
             std::wstringstream ws;
-            ws<<"Failed to start "<<m_program<<m_arguments<<std::endl;
-            m_client->writeErr(ws);
-            delete [] program;
-            delete [] argument;
+            ws<<"Failed to start "<<m_program<<" "<<m_arguments<<" "<<GetLastError()<<std::endl;
+            m_client->writeErr(ws.str());
             return -1;
         }
-        delete [] program;
-        delete [] argument;
 
         DEBUG_EVENT debug_event = {0};
 
@@ -288,15 +278,11 @@ public:
         EnumWindows(shutdown, m_pi.dwProcessId );
         if(WaitForSingleObject(SHUTDOWN_EVENT,50) != WAIT_OBJECT_0)
         {
-            std::wstringstream ws;
-            ws<<"Failed to post WM_CLOSE message";
-            m_client->writeErr(ws);
+            m_client->writeErr(L"Failed to post WM_CLOSE message");
         }
         if(FAILED(PostThreadMessage(m_pi.dwThreadId, WM_CLOSE , 0, 0)) || FAILED(PostThreadMessage(m_pi.dwThreadId, WM_QUIT , 0, 0)))
         {
-            std::wstringstream ws;
-            ws<<"Failed to post thred message";
-            m_client->writeErr(ws);
+            m_client->writeErr(L"Failed to post thred message");
         }
 
         if(WaitForSingleObject(m_pi.hProcess,10000) == WAIT_TIMEOUT)

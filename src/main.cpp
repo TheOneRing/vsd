@@ -88,10 +88,10 @@ public:
         m_hout = GetStdHandle( STD_OUTPUT_HANDLE  );
         GetConsoleScreenBufferInfo( m_hout, &m_consoleSettings);
 
-        htmlHEADER(program, arguments);
+        htmlHEADER(program, arguments.str());
         std::wstringstream ws;
         ws<<program<<arguments.str()<<std::endl;
-        print(ws, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
         m_process = new VSDProcess(program, arguments.str(), this);
         m_process->debugSubProcess(withSubProcess);
@@ -115,14 +115,14 @@ public:
 
     }
 
-    void htmlHEADER(const wchar_t *program,const std::wstringstream &arguments)
+    void htmlHEADER(const std::wstring &program,const std::wstring &arguments)
     {
         if(!m_html)
             return;
         printFilePlain("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\" />\n<title>");
         std::wstringstream ws;
         ws<<program<<" "<<arguments;
-        printFile(ws,0);
+        printFile(ws.str(),0);
         printFilePlain("</title>\n</head>\n\n<body>");
 
     }
@@ -140,7 +140,7 @@ public:
         WriteFile(m_log,data, strlen(data) * sizeof(char), &dwRead,NULL);
     }
 
-    void printFile(const std::wstringstream &data,WORD color)
+    void printFile(const std::wstring &data,WORD color)
     {
         if(m_log == INVALID_HANDLE_VALUE)
             return;
@@ -168,46 +168,46 @@ public:
             printFilePlain("<p style=\"color:\0");
             printFilePlain(tag);
             printFilePlain("\">\0");
-            WriteFile(m_log,data.str().c_str(), data.str().size()* sizeof(wchar_t), &dwRead,NULL);
+            WriteFile(m_log,data.c_str(), data.size()* sizeof(wchar_t), &dwRead,NULL);
             printFilePlain("</p>\n");
         }
         else
         {
-            WriteFile(m_log,data.str().c_str(), data.str().size()* sizeof(wchar_t), &dwRead,NULL);
+            WriteFile(m_log,data.c_str(), data.size()* sizeof(wchar_t), &dwRead,NULL);
         }
     }
 
-    void print(const std::wstringstream &data,WORD color)
+    void print(const std::wstring &data,WORD color)
     {        
         static std::mutex mutex;
         std::lock_guard<std::mutex> lock(mutex);
         if( m_colored )
             SetConsoleTextAttribute( m_hout, color);
-        std::wcout<<data.str();
+        std::wcout<<data;
         printFile(data,color);
     }
 
-    void writeStdout(const std::wstringstream &data)
+    void writeStdout(const std::wstring &data)
     {
         print(data, m_consoleSettings.wAttributes);
     }
 
-    void writeErr(const std::wstringstream &data)
+    void writeErr(const std::wstring &data)
     {
         print(data, FOREGROUND_RED);
     }
 
-    void writeDebug(const VSDChildProcess *process,const std::wstringstream &data)
+    void writeDebug(const VSDChildProcess *process,const std::wstring &data)
     {
         std::wstringstream ws;
-        ws<<process->name()<<": "<<data.str();
-        print(ws, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        ws<<process->name()<<": "<<data;
+        print(ws.str(), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
     }
     void processStarted(const VSDChildProcess *process)
     {
         std::wstringstream ws;
         ws<<"Process Created: "<<process->path()<<std::endl;
-        print(ws, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
     void processStopped(const VSDChildProcess *process)
@@ -223,7 +223,7 @@ public:
         <<std::chrono::duration_cast<std::chrono::seconds>(process->time()).count()<<":"
         <<std::chrono::duration_cast<std::chrono::milliseconds>(process->time()).count()
         <<std::endl;
-        print(ws,  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
 

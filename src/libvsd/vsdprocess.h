@@ -36,9 +36,9 @@ class LIBVSD_EXPORT VSDClient
 public:
     VSDClient();
     ~VSDClient();
-    virtual void writeStdout(const std::wstringstream &data) = 0;
-    virtual void writeErr(const std::wstringstream &data) = 0;
-    virtual void writeDebug(const VSDChildProcess *process,const std::wstringstream &data) = 0;
+    virtual void writeStdout(const std::wstring &data) = 0;
+    virtual void writeErr(const std::wstring &data) = 0;
+    virtual void writeDebug(const VSDChildProcess *process,const std::wstring &data) = 0;
     virtual void processStarted(const VSDChildProcess* process) = 0;
     virtual void processStopped(const VSDChildProcess* process) = 0;
 };
