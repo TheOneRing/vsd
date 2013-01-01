@@ -89,14 +89,13 @@ public:
                 prog.append(L".exe");
             }
             wchar_t wprog[MAX_PATH*2];
-            prog.copy(wprog,prog.size());
-            wprog[prog.size()] = 0;
+            wprog[prog.copy(wprog,prog.size())] = 0;
             if(! PathFindOnPath(wprog,NULL))
             {
                 std::wstringstream ws;
                 ws<<"Couldn't find "<<program<<std::endl;
                 m_client->writeErr(ws.str());
-                exit(-1);
+                return;
             }
              prog = wprog;
         }
@@ -238,6 +237,8 @@ public:
 
     int run(){
 
+        if(m_program.size() == 0)
+            return -1;
         unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
         if(m_debugSubProcess)
             debugConfig = DEBUG_PROCESS;
