@@ -258,7 +258,7 @@ public:
         return m_exitCode;
     }
 
-    static BOOL shutdown(HWND hwnd, LPARAM procId)
+    static BOOL CALLBACK shutdown(HWND hwnd, LPARAM procId)
     {
         DWORD currentProcId = 0;
         GetWindowThreadProcessId(hwnd, &currentProcId);
