@@ -175,15 +175,17 @@ public:
 
     inline std::wstring toUnicode(char *buff,int len)
     {
-        wchar_t wcharBuffer[len+1];
+        wchar_t *wcharBuffer = new wchar_t[len+1];
         wcharBuffer[MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, buff, len, wcharBuffer, len )] = 0;
-        return std::wstring(wcharBuffer);
+        std::wstring out(wcharBuffer);
+        delete [] wcharBuffer;
+        return out;
     }
 
     void readDebugMSG(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
-        wchar_t wcharBuffer[DebugString.nDebugStringLength];
+        wchar_t *wcharBuffer = new wchar_t[DebugString.nDebugStringLength];
         ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,wcharBuffer,DebugString.nDebugStringLength, NULL);
 
         if ( DebugString.fUnicode )
@@ -194,6 +196,7 @@ public:
         {
             m_client->writeDebug(child, toUnicode((char*)wcharBuffer,DebugString.nDebugStringLength));
         }
+        delete [] wcharBuffer;
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
@@ -224,7 +227,7 @@ public:
         bSuccess = PeekNamedPipe(p.hRead, NULL, 0, NULL, &dwRead, NULL);
         if(bSuccess && dwRead>0)
         {
-            char charBuffer[dwRead+1];
+            char *charBuffer =  new char[dwRead+1];
             if(ReadFile(p.hRead, charBuffer, dwRead ,NULL, &p.overlapped))
             {
                 std::wstring out(toUnicode(charBuffer,dwRead));
@@ -235,6 +238,7 @@ public:
                     m_client->writeErr(out);
 
             }
+            delete [] charBuffer;
         }
     }
 
