@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <map>
 #include <time.h>
+#include <Shlwapi.h>
 
 #define VSD_BUFLEN 4096
 
@@ -77,10 +78,31 @@ public:
 
     PrivateVSDProcess(const std::wstring &program,const std::wstring &arguments,VSDClient *client)
         :m_client(client)
-        ,m_program(program)
         ,m_arguments(arguments)
         ,m_exitCode(STILL_ACTIVE)
     {
+        std::wstring prog = program;
+        if(!PathFileExists(prog.c_str()))
+        {
+            if(prog.compare(prog.length()-4,4,L".exe",4))
+            {
+                prog.append(L".exe");
+            }
+            wchar_t wprog[MAX_PATH*2];
+            prog.copy(wprog,prog.size());
+            wprog[prog.size()] = 0;
+            if(! PathFindOnPath(wprog,NULL))
+            {
+                std::wstringstream ws;
+                ws<<"Couldn't find "<<program<<std::endl;
+                m_client->writeErr(ws.str());
+                exit(-1);
+            }
+             prog = wprog;
+        }
+
+        m_program = prog;
+
 
         SECURITY_ATTRIBUTES sa = {0};
         sa.nLength = sizeof(sa);
@@ -281,11 +303,13 @@ public:
         EnumWindows(shutdown, m_pi.dwProcessId );
         if(WaitForSingleObject(SHUTDOWN_EVENT,50) != WAIT_OBJECT_0)
         {
-            m_client->writeErr(L"Failed to post WM_CLOSE message");
+            m_client->writeErr(L"Failed to post WM_CLOSE message\n");
+            m_children[m_pi.dwProcessId]->stop();
+            return;
         }
         if(FAILED(PostThreadMessage(m_pi.dwThreadId, WM_CLOSE , 0, 0)) || FAILED(PostThreadMessage(m_pi.dwThreadId, WM_QUIT , 0, 0)))
         {
-            m_client->writeErr(L"Failed to post thred message");
+            m_client->writeErr(L"Failed to post thred message\n");
         }
 
         if(WaitForSingleObject(m_pi.hProcess,10000) == WAIT_TIMEOUT)
