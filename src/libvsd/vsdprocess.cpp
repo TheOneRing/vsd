@@ -233,6 +233,8 @@ public:
             readOutput(m_stdout);
             readOutput(m_stderr);
             if (WaitForDebugEvent(&debug_event,500)){
+                readOutput(m_stdout);
+                readOutput(m_stderr);
                 switch(debug_event.dwDebugEventCode){
                 case  OUTPUT_DEBUG_STRING_EVENT:
                     readDebugMSG(debug_event);
