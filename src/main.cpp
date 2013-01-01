@@ -36,7 +36,8 @@ using namespace libvsd;
 void printHelp(){
     std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<
                 std::endl<<L"Options:"<<
-                std::endl<<L"--vsd-log logFile\t File to log VSD output to"<<
+                std::endl<<L"--vsd-log logFile\t Write a log in colored html to logFile"<<
+                std::endl<<L"--vsd-logplain logFile\t Write a log to logFile"<<
                 std::endl<<L"--vsd-all\t\t Debug also all processes created by TARGET_APPLICATION"<<
                 std::endl<<L"--vsd-nc \t\t Monochrome output"<<
                 std::endl<<L"--help \t\t\t print this help";
@@ -59,15 +60,12 @@ public:
             std::wstring arg(in[i]);
             if(arg == L"--vsd-log")
             {
-                if(i+1<=len)
-                {
-                    i++;
-                    m_log = CreateFile(in[i], GENERIC_WRITE, FILE_SHARE_READ, NULL,CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-                }
-                else
-                {
-                    printHelp();
-                }
+                i = initLog(in,i,len);
+            }
+            else if(arg == L"--vsd-logplain")
+            {
+                m_html = false;
+                i = initLog(in,i,len);
             }
             else  if(arg == L"--vsd-all")
             {
@@ -108,6 +106,19 @@ public:
         }
         SetConsoleTextAttribute( m_hout, m_consoleSettings.wAttributes );
         CloseHandle(m_hout);
+    }
+
+    int initLog(wchar_t *in[],int pos,int len)
+    {
+        if(pos+1<=len)
+        {
+            m_log = CreateFile(in[++pos], GENERIC_WRITE, FILE_SHARE_READ, NULL,CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        }
+        else
+        {
+            printHelp();
+        }
+        return pos;
     }
 
     void run()
@@ -178,7 +189,7 @@ public:
     }
 
     void print(const std::wstring &data,WORD color)
-    {        
+    {
         static std::mutex mutex;
         std::lock_guard<std::mutex> lock(mutex);
         if( m_colored )
@@ -214,7 +225,7 @@ public:
     {
         std::wstringstream ws;
         ws<<"Process Stopped: "
-        <<process->path()
+         <<process->path()
         <<"  With exit Code: "
         << process->exitCode()
         <<"  After: "

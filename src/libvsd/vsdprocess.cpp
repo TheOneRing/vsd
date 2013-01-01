@@ -329,7 +329,6 @@ public:
     std::wstring m_arguments;
     bool m_debugSubProcess;
 
-
     unsigned long m_exitCode;
 
     STARTUPINFO m_si;
