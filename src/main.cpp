@@ -146,11 +146,18 @@ public:
     {
         if(!m_html)
             return;
-        printFilePlain("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\" />\n<title>");
-        std::wstringstream ws;
-        ws<<program<<" "<<arguments;
-        printFile(ws.str(),0);
-        printFilePlain("</title>\n</head>\n\n<body>");
+        std::stringstream ss;
+        ss<<"<!DOCTYPE html>\n"<<
+            "<html>\n"<<
+            "<head>\n"<<
+            "<meta charset=\"UTF-8\" />\n"<<
+            "<title>VSD "<<
+            std::string(program.begin(),program.end())<<" "<<
+            std::string(arguments.begin(),arguments.end())<<
+            "</title>\n"<<
+            "</head>\n"<<
+            "<body>";
+        printFilePlain(ss.str());
 
     }
 
