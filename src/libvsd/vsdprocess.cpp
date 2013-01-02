@@ -40,7 +40,7 @@
 //inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp
 using namespace libvsd;
 
-static HANDLE SHUTDOWN_EVENT = CreateEvent(NULL,false,false,L"SHutdown Event");
+static HANDLE SHUTDOWN_EVENT = CreateEvent(NULL,false,false,L"Shutdown Event");
 
 class VSDProcess::PrivateVSDProcess{
 public:
