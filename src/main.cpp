@@ -34,13 +34,26 @@ using namespace libvsd;
 #define VSDBUFF_SIZE 4096
 
 void printHelp(){
-    std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<
-                std::endl<<L"Options:"<<
-                std::endl<<L"--vsd-log logFile\t Write a log in colored html to logFile"<<
-                std::endl<<L"--vsd-logplain logFile\t Write a log to logFile"<<
-                std::endl<<L"--vsd-all\t\t Debug also all processes created by TARGET_APPLICATION"<<
-                std::endl<<L"--vsd-nc \t\t Monochrome output"<<
-                std::endl<<L"--help \t\t\t print this help";
+    std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<std::endl<<
+                L"Options:"<<std::endl<<
+                L"--vsd-log logFile\t Write a log in colored html to logFile"<<std::endl<<
+                L"--vsd-logplain logFile\t Write a log to logFile"<<std::endl<<
+                L"--vsd-all\t\t Debug also all processes created by TARGET_APPLICATION"<<std::endl<<
+                L"--vsd-nc \t\t Monochrome output"<<std::endl<<
+                L"--help \t\t\t print this help"<<std::endl<<
+                L"--version\t\t print version and copyright information"<<std::endl;
+    exit(0);
+}
+
+void printVersion(){
+    std::wcout<<L"VSD version 0.5"<<std::endl<<
+                std::endl<<
+                L"Copyright (C) 2012  Patrick von Reth <vonreth@kde.org>"<<std::endl<<
+                std::endl<<
+                L"VSD is free software: you can redistribute it and/or modify"<<std::endl<<
+                L"it under the terms of the GNU Lesser General Public License as published by"<<std::endl<<
+                L"the Free Software Foundation, either version 3 of the License, or"<<std::endl<<
+                L"(at your option) any later version."<<std::endl;
     exit(0);
 }
 
@@ -78,7 +91,12 @@ public:
             else  if(arg == L"--help")
             {
                 printHelp();
-            }else if(i>1)
+            }
+            else  if(arg == L"--version")
+            {
+                printVersion();
+            }
+            else if(i>1)
             {
                 arguments<<"\""<<arg<<"\" ";
             }
