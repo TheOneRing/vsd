@@ -47,9 +47,9 @@ public:
     class Pipe
     {
     public:
-        Pipe()
-            : hWrite(INVALID_HANDLE_VALUE)
-            , hRead(INVALID_HANDLE_VALUE)
+        Pipe():
+            hWrite(INVALID_HANDLE_VALUE),
+            hRead(INVALID_HANDLE_VALUE)
         {
             ZeroMemory(&overlapped, sizeof(overlapped));
         }
@@ -74,10 +74,10 @@ public:
         OVERLAPPED overlapped;
     };
 
-    PrivateVSDProcess(const std::wstring &program,const std::wstring &arguments,VSDClient *client)
-        :m_client(client)
-        ,m_arguments(arguments)
-        ,m_exitCode(STILL_ACTIVE)
+    PrivateVSDProcess(const std::wstring &program,const std::wstring &arguments,VSDClient *client) :
+        m_client(client),
+        m_arguments(arguments),
+        m_exitCode(STILL_ACTIVE)
     {
         std::wstring prog = program;
         if(!PathFileExists(prog.c_str()))

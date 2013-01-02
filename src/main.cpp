@@ -18,20 +18,18 @@
     along with SnarlNetworkBridge.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "libvsd/vsdprocess.h"
+#include "libvsd/vsdchildprocess.h"
+
 #include <windows.h>
 #include <string>
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
 #include <signal.h>
-#include "libvsd/vsdprocess.h"
-#include "libvsd/vsdchildprocess.h"
-
 #include <mutex>
 
 using namespace libvsd;
-
-#define VSDBUFF_SIZE 4096
 
 void printHelp(){
     std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<std::endl<<
@@ -59,11 +57,11 @@ void printVersion(){
 
 class VSDImp: public VSDClient{
 public:
-    VSDImp(wchar_t *in[],int len)
-        :m_exitCode(0)
-        ,m_log(INVALID_HANDLE_VALUE)
-        ,m_colored(true)
-        ,m_html(true)
+    VSDImp(wchar_t *in[],int len) :
+        m_exitCode(0),
+        m_log(INVALID_HANDLE_VALUE),
+        m_colored(true),
+        m_html(true)
     {
         std::wstring program(in[1]);
         std::wstringstream arguments;
