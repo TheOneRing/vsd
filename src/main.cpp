@@ -105,7 +105,7 @@ public:
 
         htmlHEADER(program, arguments.str());
         std::wstringstream ws;
-        ws<<program<<arguments.str()<<std::endl;
+        ws<<program<<" "<<arguments.str()<<std::endl;
         print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
         m_process = new VSDProcess(program, arguments.str(), this);
@@ -228,7 +228,7 @@ public:
 
     void writeErr(const std::wstring &data)
     {
-        print(data, FOREGROUND_RED);
+        print(data, FOREGROUND_RED | FOREGROUND_INTENSITY);
     }
 
     void writeDebug(const VSDChildProcess *process,const std::wstring &data)

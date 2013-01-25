@@ -80,13 +80,21 @@ public:
         m_exitCode(STILL_ACTIVE)
     {
         std::wstring prog = program;
-        if(!PathFileExists(prog.c_str()))
+
+        if(prog.compare(prog.length()-4,4,L".exe",4))
         {
-            if(prog.compare(prog.length()-4,4,L".exe",4))
-            {
-                prog.append(L".exe");
-            }
-            wchar_t wprog[MAX_PATH*2];
+            prog.append(L".exe");
+        }
+        wchar_t wprog[MAX_PATH*2];
+
+        if(PathFileExists(prog.c_str()))
+        {
+
+            GetFullPathName(prog.c_str(),MAX_PATH*2,wprog,NULL);
+
+        }
+        else
+        {
             wprog[prog.copy(wprog,prog.size())] = 0;
             if(! PathFindOnPath(wprog,NULL))
             {
@@ -95,10 +103,9 @@ public:
                 m_client->writeErr(ws.str());
                 return;
             }
-            prog = wprog;
         }
 
-        m_program = prog;
+        m_program = wprog;;
 
 
         SECURITY_ATTRIBUTES sa = {0};
@@ -249,7 +256,10 @@ public:
         unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
         if(m_debugSubProcess)
             debugConfig = DEBUG_PROCESS;
-        if(!CreateProcess ( (wchar_t*)m_program.c_str(), (wchar_t*)m_arguments.c_str(), NULL, NULL, TRUE,debugConfig, NULL,NULL,&m_si, &m_pi )){
+
+        std::wstringstream tmp;
+        tmp<<"\""<<m_program<<"\" "<<m_arguments;
+        if(!CreateProcess ( (wchar_t*)m_program.c_str(), (wchar_t*)tmp.str().c_str(), NULL, NULL, TRUE,debugConfig, NULL,NULL,&m_si, &m_pi )){
             std::wstringstream ws;
             ws<<"Failed to start "<<m_program<<" "<<m_arguments<<" "<<GetLastError()<<std::endl;
             m_client->writeErr(ws.str());
