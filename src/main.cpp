@@ -44,7 +44,7 @@ void printHelp(){
 }
 
 void printVersion(){
-    std::wcout<<L"VSD version 0.5"<<std::endl<<
+    std::wcout<<L"VSD version 0.5.1"<<std::endl<<
                 std::endl<<
                 L"Copyright (C) 2012  Patrick von Reth <vonreth@kde.org>"<<std::endl<<
                 std::endl<<
