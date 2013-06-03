@@ -38,6 +38,7 @@ void printHelp(){
                 L"--vsd-logplain logFile\t Write a log to logFile"<<std::endl<<
                 L"--vsd-all\t\t Debug also all processes created by TARGET_APPLICATION"<<std::endl<<
                 L"--vsd-nc \t\t Monochrome output"<<std::endl<<
+                L"--vsd-benchmark \t\t VSD won't print the output, a slow terminal would fake the outcome"<<std::endl<<
                 L"--help \t\t\t print this help"<<std::endl<<
                 L"--version\t\t print version and copyright information"<<std::endl;
     exit(0);
@@ -61,7 +62,8 @@ public:
         m_exitCode(0),
         m_log(INVALID_HANDLE_VALUE),
         m_colored(true),
-        m_html(true)
+        m_html(true),
+        m_noOutput(false)
     {
         std::wstring program(in[1]);
         std::wstringstream arguments;
@@ -85,6 +87,10 @@ public:
             else  if(arg == L"--vsd-nc")
             {
                 m_colored = false;
+            }
+            else if(arg == L"--vsd-benchmark")
+            {
+                m_noOutput = true;
             }
             else  if(arg == L"--help")
             {
@@ -223,19 +229,24 @@ public:
 
     void writeStdout(const std::wstring &data)
     {
-        print(data, m_consoleSettings.wAttributes);
+        if(!m_noOutput)
+            print(data, m_consoleSettings.wAttributes);
     }
 
     void writeErr(const std::wstring &data)
     {
-        print(data, FOREGROUND_RED | FOREGROUND_INTENSITY);
+        if(!m_noOutput)
+            print(data, FOREGROUND_RED | FOREGROUND_INTENSITY);
     }
 
     void writeDebug(const VSDChildProcess *process,const std::wstring &data)
     {
-        std::wstringstream ws;
-        ws<<process->name()<<": "<<data;
-        print(ws.str(), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        if(!m_noOutput)
+        {
+            std::wstringstream ws;
+            ws<<process->name()<<": "<<data;
+            print(ws.str(), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        }
     }
     void processStarted(const VSDChildProcess *process)
     {
@@ -260,6 +271,23 @@ public:
         print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
+    void processDied(const VSDChildProcess *process)
+    {
+        std::wstringstream ws;
+        ws<<"Process Died: "
+         <<process->path()
+        << " Error: "
+        << process->error()
+        <<"  With exit Code: "
+        << process->exitCode()
+        <<"  After: "
+        <<std::chrono::duration_cast<std::chrono::hours>(process->time()).count()<<":"
+        <<std::chrono::duration_cast<std::chrono::minutes>(process->time()).count()<<":"
+        <<std::chrono::duration_cast<std::chrono::seconds>(process->time()).count()<<":"
+        <<std::chrono::duration_cast<std::chrono::milliseconds>(process->time()).count()
+        <<std::endl;
+        print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+    }
 
     void stop()
     {
@@ -268,12 +296,14 @@ public:
 
     int m_exitCode;
 private:
+
     VSDProcess *m_process;
     HANDLE m_log;
     HANDLE m_hout;
     CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
     bool m_colored;
     bool m_html;
+    bool m_noOutput;
 
 
 };

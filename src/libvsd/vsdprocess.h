@@ -41,6 +41,7 @@ public:
     virtual void writeDebug(const VSDChildProcess *process,const std::wstring &data) = 0;
     virtual void processStarted(const VSDChildProcess* process) = 0;
     virtual void processStopped(const VSDChildProcess* process) = 0;
+    virtual void processDied(const VSDChildProcess* process) = 0;
 };
 
 class LIBVSD_EXPORT VSDProcess

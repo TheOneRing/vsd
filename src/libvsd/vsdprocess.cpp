@@ -32,10 +32,9 @@
 #include <time.h>
 #include <Shlwapi.h>
 
-#ifdef __MINGW64_VERSION_MAJOR
+#ifndef PIPE_REJECT_REMOTE_CLIENTS
 #define PIPE_REJECT_REMOTE_CLIENTS 0x00000008
 #endif
-
 
 //inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp
 using namespace libvsd;
@@ -228,6 +227,22 @@ public:
         delete child;
     }
 
+    void readProcessRip(DEBUG_EVENT &debugEvent){
+        VSDChildProcess *child = m_children[debugEvent.dwProcessId];
+        child->processDied(debugEvent.u.ExitProcess.dwExitCode,debugEvent.u.RipInfo.dwError);
+        m_client->processDied(child);
+        m_children.erase(child->id());
+        if(m_pi.dwProcessId == child->id())
+        {
+            m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
+            for(auto it : m_children)//first stop everything and then cleanup
+            {
+                it.second->stop();
+            }
+        }
+        delete child;
+    }
+
     void readOutput(Pipe &p){
         BOOL bSuccess = FALSE;
         DWORD dwRead;
@@ -267,9 +282,11 @@ public:
         }
 
         DEBUG_EVENT debug_event = {0};
+        DWORD status = DBG_CONTINUE;
 
 
         do{
+            status = DBG_CONTINUE;
             readOutput(m_stdout);
             readOutput(m_stderr);
             if (WaitForDebugEvent(&debug_event,500)){
@@ -285,11 +302,17 @@ public:
                 case EXIT_PROCESS_DEBUG_EVENT:
                     readProcessExited(debug_event);
                     break;
+                case EXCEPTION_DEBUG_EVENT:
+                    status = debug_event.u.Exception.ExceptionRecord.ExceptionFlags==0?DBG_CONTINUE:DBG_EXCEPTION_NOT_HANDLED;
+                    break;
+                case RIP_EVENT:
+                    readProcessRip(debug_event);
+                    break;
                 default:
                     break;
                 }
             }
-            ContinueDebugEvent(debug_event.dwProcessId, debug_event.dwThreadId, DBG_CONTINUE);
+            ContinueDebugEvent(debug_event.dwProcessId, debug_event.dwThreadId, status);
         }while(m_children.size()>0);
 
         readOutput(m_stdout);

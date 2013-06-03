@@ -87,8 +87,34 @@ const int VSDChildProcess::exitCode() const
 
 void VSDChildProcess::processStopped(const int exitCode)
 {
-    m_exitCode = exitCode;
     m_duration = std::chrono::high_resolution_clock::now() - m_startTime;
+    m_exitCode = exitCode;
+}
+
+void VSDChildProcess::processDied(const int exitCode,const int errorCode)
+{
+
+    processStopped(exitCode);
+
+    LPVOID error = NULL;
+    size_t len = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                               FORMAT_MESSAGE_FROM_SYSTEM |
+                               FORMAT_MESSAGE_IGNORE_INSERTS,
+                               NULL,
+                               errorCode,
+                               MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                               (LPWSTR) &error ,
+                               0, NULL );
+    m_error.copy((wchar_t*)error,len,0);
+    std::wcout<<L"Error: "<<errorCode<<L" "<<(wchar_t*)error<<std::endl;
+    std::wcout<<m_error.c_str()<<std::endl;
+    LocalFree(error);
+}
+
+void VSDChildProcess::processDied(const int exitCode, std::wstring error)
+{
+    processStopped(exitCode);
+    m_error = error;
 }
 
 void VSDChildProcess::stop()
@@ -100,4 +126,10 @@ void VSDChildProcess::stop()
         m_client->writeErr(ws.str());
         TerminateProcess(handle(), 0);
     }
+}
+
+
+const std::wstring &libvsd::VSDChildProcess::error() const
+{
+    return m_error;
 }

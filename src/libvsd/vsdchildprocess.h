@@ -40,11 +40,15 @@ public:
     const HANDLE& handle() const;
     const std::wstring &path() const;
     const std::wstring &name() const;
+    const std::wstring &error() const;
     const std::chrono::high_resolution_clock::duration time() const;
     const unsigned long id() const;
     const int exitCode() const;
 
     void processStopped(const int exitCode);
+    void processDied(const int exitCode, const int error);
+    void processDied(const int exitCode, std::wstring error);
+
     void stop();
 
 private:
@@ -52,6 +56,7 @@ private:
     HANDLE m_handle;
     std::wstring m_path;
     std::wstring  m_name;
+    std::wstring m_error;
     unsigned long m_id;
     std::chrono::high_resolution_clock::time_point m_startTime;
     std::chrono::high_resolution_clock::duration m_duration;
