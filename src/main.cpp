@@ -177,7 +177,7 @@ public:
                 print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY,true);
             }
         }
-        std::wcout << ste::endl;
+        std::wcout << std::endl;
     }
 
     void htmlHEADER(const std::wstring &program,const std::wstring &arguments)
