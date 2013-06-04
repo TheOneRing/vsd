@@ -145,6 +145,10 @@ public:
         if(pos+1<len)
         {
             m_iterations = _wtoi(in[++pos]);
+            if(m_iterations == 0)
+            {
+                printHelp();
+            }
         }
         else
         {
@@ -156,17 +160,24 @@ public:
 
     void run()
     {
-        std::chrono::system_clock::duration time;
-        for(int i = 1;i<=m_iterations;++i)
+        std::chrono::system_clock::duration time(0);
+        for(int i = 1;m_run && i<=m_iterations;++i)
         {
             m_exitCode = m_process->run();
             time += m_process->time();
-            std::wstringstream ws;
-            ws << "Commands executed in: "
-               << getTimestamp(time/i)
-               << std::endl;
-            print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+            if(m_iterations>1)
+            {
+                std::wstringstream ws;
+                ws << "\rBenchmark iteration: "
+                   << i
+                   << ", mean execution time: "
+                   << getTimestamp(time/i)
+                   << " total execution time "
+                   << getTimestamp(time);
+                print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY,true);
+            }
         }
+        std::wcout << ste::endl;
     }
 
     void htmlHEADER(const std::wstring &program,const std::wstring &arguments)
@@ -238,13 +249,16 @@ public:
         }
     }
 
-    void print(const std::wstring &data,WORD color)
+    void print(const std::wstring &data,WORD color,bool printAlways = false)
     {
         static std::mutex mutex;
         std::lock_guard<std::mutex> lock(mutex);
-        if( m_colored )
-            SetConsoleTextAttribute( m_hout, color);
-        std::wcout<<data;
+        if(printAlways || !m_noOutput)
+        {
+            if( m_colored )
+                SetConsoleTextAttribute( m_hout, color);
+            std::wcout<<data;
+        }
         printFile(data,color);
     }
 
@@ -260,24 +274,19 @@ public:
 
     void writeStdout(const std::wstring &data)
     {
-        if(!m_noOutput)
-            print(data, m_consoleSettings.wAttributes);
+        print(data, m_consoleSettings.wAttributes);
     }
 
     void writeErr(const std::wstring &data)
     {
-        if(!m_noOutput)
-            print(data, FOREGROUND_RED | FOREGROUND_INTENSITY);
+        print(data, FOREGROUND_RED | FOREGROUND_INTENSITY);
     }
 
     void writeDebug(const VSDChildProcess *process,const std::wstring &data)
     {
-        if(!m_noOutput)
-        {
-            std::wstringstream ws;
-            ws<<process->name()<<": "<<data;
-            print(ws.str(), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-        }
+        std::wstringstream ws;
+        ws<<process->name()<<": "<<data;
+        print(ws.str(), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
     }
     void processStarted(const VSDChildProcess *process)
     {
@@ -316,6 +325,7 @@ public:
 
     void stop()
     {
+        m_run = false;
         m_process->stop();
     }
 
@@ -330,6 +340,7 @@ private:
     bool m_html = true;
     bool m_noOutput = false;
     int m_iterations = 1;
+    bool m_run = true;
 
 
 };
