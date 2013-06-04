@@ -26,6 +26,7 @@
 #include <windows.h>
 #include <string>
 #include <sstream>
+#include <chrono>
 
 namespace libvsd {
 
@@ -56,6 +57,7 @@ public:
     const std::wstring &program() const;
     const std::wstring &arguments() const;
     int exitCode() const;
+    const std::chrono::system_clock::duration &time() const;
 
 private:
     class PrivateVSDProcess;

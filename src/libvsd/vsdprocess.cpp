@@ -75,8 +75,7 @@ public:
 
     PrivateVSDProcess(const std::wstring &program,const std::wstring &arguments,VSDClient *client) :
         m_client(client),
-        m_arguments(arguments),
-        m_exitCode(STILL_ACTIVE)
+        m_arguments(arguments)
     {
         std::wstring prog = program;
 
@@ -211,6 +210,17 @@ public:
         m_client->processStarted(child);
     }
 
+    void cleanup(VSDChildProcess *child,DEBUG_EVENT &debugEvent)
+    {
+        m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
+        m_time = child->time();
+
+        for(auto it : m_children)//first stop everything and then cleanup
+        {
+            it.second->stop();
+        }
+    }
+
     void readProcessExited(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         child->processStopped(debugEvent.u.ExitProcess.dwExitCode);
@@ -218,11 +228,7 @@ public:
         m_children.erase(child->id());
         if(m_pi.dwProcessId == child->id())
         {
-            m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
-            for(auto it : m_children)//first stop everything and then cleanup
-            {
-                it.second->stop();
-            }
+            cleanup(child,debugEvent);
         }
         delete child;
     }
@@ -234,11 +240,7 @@ public:
         m_children.erase(child->id());
         if(m_pi.dwProcessId == child->id())
         {
-            m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
-            for(auto it : m_children)//first stop everything and then cleanup
-            {
-                it.second->stop();
-            }
+            cleanup(child,debugEvent);
         }
         delete child;
     }
@@ -364,9 +366,10 @@ public:
     VSDClient *m_client;
     std::wstring m_program;
     std::wstring m_arguments;
-    bool m_debugSubProcess;
+    bool m_debugSubProcess = false;
 
-    unsigned long m_exitCode;
+    unsigned long m_exitCode = STILL_ACTIVE;
+    std::chrono::system_clock::duration m_time;
 
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
@@ -426,5 +429,10 @@ const std::wstring &VSDProcess::arguments() const
 int VSDProcess::exitCode() const
 {
     return d->m_exitCode;
+}
+
+const std::chrono::system_clock::duration &VSDProcess::time() const
+{
+    return d->m_time;
 }
 

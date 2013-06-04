@@ -30,7 +30,6 @@
 
 using namespace libvsd;
 
-namespace cr = std::chrono;
 
 #define VSD_BUFLEN 4096
 

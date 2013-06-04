@@ -28,19 +28,20 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <mutex>
+#include <chrono>
 
 using namespace libvsd;
 
 void printHelp(){
     std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<std::endl<<
                 L"Options:"<<std::endl<<
-                L"--vsd-log logFile\t Write a log in colored html to logFile"<<std::endl<<
-                L"--vsd-logplain logFile\t Write a log to logFile"<<std::endl<<
-                L"--vsd-all\t\t Debug also all processes created by TARGET_APPLICATION"<<std::endl<<
-                L"--vsd-nc \t\t Monochrome output"<<std::endl<<
-                L"--vsd-benchmark \t\t VSD won't print the output, a slow terminal would fake the outcome"<<std::endl<<
-                L"--help \t\t\t print this help"<<std::endl<<
-                L"--version\t\t print version and copyright information"<<std::endl;
+                L"--vsd-log logFile \t\t Write a log in colored html to logFile"<<std::endl<<
+                L"--vsd-logplain logFile \t\t Write a log to logFile"<<std::endl<<
+                L"--vsd-all\t\t\t Debug also all processes created by TARGET_APPLICATION"<<std::endl<<
+                L"--vsd-nc \t\t\t Monochrome output"<<std::endl<<
+                L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome"<<std::endl<<
+                L"--help \t\t\t\t print this help"<<std::endl<<
+                L"--version\t\t\t print version and copyright information"<<std::endl;
     exit(0);
 }
 
@@ -58,12 +59,7 @@ void printVersion(){
 
 class VSDImp: public VSDClient{
 public:
-    VSDImp(wchar_t *in[],int len) :
-        m_exitCode(0),
-        m_log(INVALID_HANDLE_VALUE),
-        m_colored(true),
-        m_html(true),
-        m_noOutput(false)
+    VSDImp(wchar_t *in[],int len)
     {
         std::wstring program(in[1]);
         std::wstringstream arguments;
@@ -90,7 +86,7 @@ public:
             }
             else if(arg == L"--vsd-benchmark")
             {
-                m_noOutput = true;
+                i = initBenchmark(in,i,len);
             }
             else  if(arg == L"--help")
             {
@@ -132,7 +128,7 @@ public:
 
     int initLog(wchar_t *in[],int pos,int len)
     {
-        if(pos+1<=len)
+        if(pos+1<len)
         {
             m_log = CreateFile(in[++pos], GENERIC_WRITE, FILE_SHARE_READ, NULL,CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         }
@@ -143,9 +139,34 @@ public:
         return pos;
     }
 
+    int initBenchmark(wchar_t *in[],int pos,int len)
+    {
+        m_noOutput = true;
+        if(pos+1<len)
+        {
+            m_iterations = _wtoi(in[++pos]);
+        }
+        else
+        {
+            printHelp();
+        }
+        return pos;
+    }
+
+
     void run()
     {
-        m_exitCode = m_process->run();
+        std::chrono::system_clock::duration time;
+        for(int i = 1;i<=m_iterations;++i)
+        {
+            m_exitCode = m_process->run();
+            time += m_process->time();
+            std::wstringstream ws;
+            ws << "Commands executed in: "
+               << getTimestamp(time/i)
+               << std::endl;
+            print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        }
     }
 
     void htmlHEADER(const std::wstring &program,const std::wstring &arguments)
@@ -227,6 +248,16 @@ public:
         printFile(data,color);
     }
 
+    std::wstring getTimestamp(const std::chrono::system_clock::duration &time)
+    {
+        std::wstringstream out;
+        out << std::chrono::duration_cast<std::chrono::hours>(time).count()<<":"
+            << std::chrono::duration_cast<std::chrono::minutes>(time).count()<<":"
+            << std::chrono::duration_cast<std::chrono::seconds>(time).count()<<" ("
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time).count()<<")";
+        return out.str();
+    }
+
     void writeStdout(const std::wstring &data)
     {
         if(!m_noOutput)
@@ -258,34 +289,28 @@ public:
     void processStopped(const VSDChildProcess *process)
     {
         std::wstringstream ws;
-        ws<<"Process Stopped: "
-         <<process->path()
-        <<"  With exit Code: "
-        << process->exitCode()
-        <<"  After: "
-        <<std::chrono::duration_cast<std::chrono::hours>(process->time()).count()<<":"
-        <<std::chrono::duration_cast<std::chrono::minutes>(process->time()).count()<<":"
-        <<std::chrono::duration_cast<std::chrono::seconds>(process->time()).count()<<":"
-        <<std::chrono::duration_cast<std::chrono::milliseconds>(process->time()).count()
-        <<std::endl;
+        ws << "Process Stopped: "
+           << process->path()
+           << "  With exit Code: "
+           << process->exitCode()
+           << "  After: "
+           << getTimestamp(process->time())
+           << std::endl;
         print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
     void processDied(const VSDChildProcess *process)
     {
         std::wstringstream ws;
-        ws<<"Process Died: "
-         <<process->path()
-        << " Error: "
-        << process->error()
-        <<"  With exit Code: "
-        << process->exitCode()
-        <<"  After: "
-        <<std::chrono::duration_cast<std::chrono::hours>(process->time()).count()<<":"
-        <<std::chrono::duration_cast<std::chrono::minutes>(process->time()).count()<<":"
-        <<std::chrono::duration_cast<std::chrono::seconds>(process->time()).count()<<":"
-        <<std::chrono::duration_cast<std::chrono::milliseconds>(process->time()).count()
-        <<std::endl;
+        ws << "Process Died: "
+           << process->path()
+           << " Error: "
+           << process->error()
+           << "  With exit Code: "
+           << process->exitCode()
+           << "  After: "
+           << getTimestamp(process->time())
+           << std::endl;
         print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
@@ -294,16 +319,17 @@ public:
         m_process->stop();
     }
 
-    int m_exitCode;
+    int m_exitCode = 0;
 private:
 
     VSDProcess *m_process;
-    HANDLE m_log;
-    HANDLE m_hout;
+    HANDLE m_log = INVALID_HANDLE_VALUE;
+    HANDLE m_hout = INVALID_HANDLE_VALUE;
     CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
-    bool m_colored;
-    bool m_html;
-    bool m_noOutput;
+    bool m_colored = true;
+    bool m_html = true;
+    bool m_noOutput = false;
+    int m_iterations = 1;
 
 
 };
@@ -335,7 +361,6 @@ int main()
     signal(SIGINT, &sighandler);
 
     vsdimp->run();
-
     int ret = vsdimp->m_exitCode;
     delete vsdimp;
     vsdimp = NULL;
