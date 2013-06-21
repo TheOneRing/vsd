@@ -266,9 +266,9 @@ public:
     {
         std::wstringstream out;
         out << std::chrono::duration_cast<std::chrono::hours>(time).count()<<":"
-            << std::chrono::duration_cast<std::chrono::minutes>(time).count()<<":"
-            << std::chrono::duration_cast<std::chrono::seconds>(time).count()<<" ("
-            << std::chrono::duration_cast<std::chrono::milliseconds>(time).count()<<")";
+            << std::chrono::duration_cast<std::chrono::minutes>(time).count()%60<<":"
+            << std::chrono::duration_cast<std::chrono::seconds>(time).count()%60<<":"
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time).count()%1000;
         return out.str();
     }
 
