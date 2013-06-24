@@ -265,9 +265,9 @@ public:
     std::wstring getTimestamp(const std::chrono::system_clock::duration &time)
     {
         std::wstringstream out;
-        out << std::chrono::duration_cast<std::chrono::hours>(time).count()<<":"
-            << std::chrono::duration_cast<std::chrono::minutes>(time).count()%60<<":"
-            << std::chrono::duration_cast<std::chrono::seconds>(time).count()%60<<":"
+        out << std::chrono::duration_cast<std::chrono::hours>(time).count() << ":"
+            << std::chrono::duration_cast<std::chrono::minutes>(time).count()%60 << ":"
+            << std::chrono::duration_cast<std::chrono::seconds>(time).count()%60 << ":"
             << std::chrono::duration_cast<std::chrono::milliseconds>(time).count()%1000;
         return out.str();
     }
@@ -285,13 +285,13 @@ public:
     void writeDebug(const VSDChildProcess *process,const std::wstring &data)
     {
         std::wstringstream ws;
-        ws<<process->name()<<": "<<data;
+        ws<<process->name() << "(" << process->id() << "): " << data;
         print(ws.str(), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
     }
     void processStarted(const VSDChildProcess *process)
     {
         std::wstringstream ws;
-        ws<<"Process Created: "<<process->path()<<std::endl;
+        ws << "Process Created: " << process->path() << " (" << process->id() << ")" <<std::endl;
         print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
@@ -300,6 +300,7 @@ public:
         std::wstringstream ws;
         ws << "Process Stopped: "
            << process->path()
+           << " (" << process->id() << ")"
            << "  With exit Code: "
            << process->exitCode()
            << "  After: "
@@ -313,6 +314,7 @@ public:
         std::wstringstream ws;
         ws << "Process Died: "
            << process->path()
+           << " (" << process->id() << ")"
            << " Error: "
            << process->error()
            << "  With exit Code: "

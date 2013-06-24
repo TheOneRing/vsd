@@ -45,6 +45,7 @@ VSDChildProcess::VSDChildProcess(VSDClient *client, const unsigned long id, cons
     GetFinalPathNameByHandle(fileHandle,buff,VSD_BUFLEN,FILE_NAME_OPENED);
     m_path = (buff+4);
     m_name = m_path.substr(m_path.find_last_of('\\')+1);
+    m_name = m_name.substr(0,m_name.length()-4);
 }
 
 VSDChildProcess::~VSDChildProcess()
