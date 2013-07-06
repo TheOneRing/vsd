@@ -189,8 +189,8 @@ public:
         else
         {
             wchar_t *wcharBuffer = new wchar_t[len];
-            mbstowcs(wcharBuffer,buff,len);
-            out = std::wstring(wcharBuffer,len);
+            wcharBuffer[mbstowcs(wcharBuffer,buff,len)] = 0;
+            out = std::wstring(wcharBuffer);
             delete [] wcharBuffer;
         }
         return out;
