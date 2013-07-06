@@ -301,9 +301,9 @@ public:
         ws << "Process Stopped: "
            << process->path()
            << " (" << process->id() << ")"
-           << "  With exit Code: "
+           << " With exit Code: "
            << process->exitCode()
-           << "  After: "
+           << " After: "
            << getTimestamp(process->time())
            << std::endl;
         print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
@@ -317,9 +317,9 @@ public:
            << " (" << process->id() << ")"
            << " Error: "
            << process->error()
-           << "  With exit Code: "
+           << " With exit Code: "
            << process->exitCode()
-           << "  After: "
+           << " After: "
            << getTimestamp(process->time())
            << std::endl;
         print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);

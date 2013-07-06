@@ -178,30 +178,52 @@ public:
         return true;
     }
 
+
+    inline std::wstring toUnicode(char *buff,int len, bool isUnicode)
+    {
+        std::wstring out;
+        if(isUnicode)
+        {
+            out = std::wstring((wchar_t*)buff,(len+1)/sizeof(wchar_t));
+        }
+        else
+        {
+            wchar_t *wcharBuffer = new wchar_t[len];
+            mbstowcs(wcharBuffer,buff,len);
+            out = std::wstring(wcharBuffer,len);
+            delete [] wcharBuffer;
+        }
+        return out;
+    }
+
     inline std::wstring toUnicode(char *buff,int len)
     {
-        wchar_t *wcharBuffer = new wchar_t[len+1];
-        wcharBuffer[MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, buff, len, wcharBuffer, len )] = 0;
-        std::wstring out(wcharBuffer);
-        delete [] wcharBuffer;
-        return out;
+        return toUnicode(buff,len,IsTextUnicode(buff,len,NULL) == TRUE);
     }
 
     void readDebugMSG(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
-        wchar_t *wcharBuffer = new wchar_t[DebugString.nDebugStringLength];
-        ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,wcharBuffer,DebugString.nDebugStringLength, NULL);
 
-        if ( DebugString.fUnicode )
+
+        if(DebugString.fUnicode == TRUE)
         {
-            m_client->writeDebug(child,wcharBuffer);
+            size_t size = (DebugString.nDebugStringLength+1)/sizeof(wchar_t);
+            wchar_t *buffer = new wchar_t[size];
+            ZeroMemory(buffer,size);
+            ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,buffer,DebugString.nDebugStringLength, NULL);
+            m_client->writeDebug(child,buffer);
+            delete [] buffer;
         }
         else
         {
-            m_client->writeDebug(child, toUnicode((char*)wcharBuffer,DebugString.nDebugStringLength));
+            char *buffer = new char[DebugString.nDebugStringLength];
+            ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,buffer,DebugString.nDebugStringLength, NULL);
+            m_client->writeDebug(child,toUnicode(buffer,DebugString.nDebugStringLength,false));
+            delete [] buffer;
         }
-        delete [] wcharBuffer;
+
+
     }
 
     void readProcessCreated(DEBUG_EVENT &debugEvent){
@@ -257,9 +279,13 @@ public:
                 std::wstring out(toUnicode(charBuffer,dwRead));
                 out.append(L"\n");
                 if(p == m_stdout)
+                {
                     m_client->writeStdout(out);
+                }
                 else
+                {
                     m_client->writeErr(out);
+                }
 
             }
             delete [] charBuffer;
