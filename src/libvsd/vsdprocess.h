@@ -36,7 +36,7 @@ class LIBVSD_EXPORT VSDClient
 {
 public:
     VSDClient();
-    ~VSDClient();
+    virtual ~VSDClient();
     virtual void writeStdout(const std::wstring &data) = 0;
     virtual void writeErr(const std::wstring &data) = 0;
     virtual void writeDebug(const VSDChildProcess *process,const std::wstring &data) = 0;
@@ -49,7 +49,7 @@ class LIBVSD_EXPORT VSDProcess
 {
 public:
     VSDProcess(const std::wstring &program,const std::wstring &arguments,VSDClient *client);
-    ~VSDProcess();
+    virtual ~VSDProcess();
 
     int run();
     void stop();

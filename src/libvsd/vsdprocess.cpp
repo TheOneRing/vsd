@@ -106,7 +106,8 @@ public:
         m_program = wprog;;
 
 
-        SECURITY_ATTRIBUTES sa = {0};
+        SECURITY_ATTRIBUTES sa;
+        ZeroMemory(&sa,sizeof(SECURITY_ATTRIBUTES));
         sa.nLength = sizeof(sa);
         sa.bInheritHandle = TRUE;
 
@@ -309,7 +310,9 @@ public:
             return -1;
         }
 
-        DEBUG_EVENT debug_event = {0};
+        DEBUG_EVENT debug_event;
+        ZeroMemory(&debug_event,sizeof(DEBUG_EVENT));
+
         DWORD status = DBG_CONTINUE;
 
 

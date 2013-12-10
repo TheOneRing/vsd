@@ -75,12 +75,12 @@ const std::chrono::system_clock::duration VSDChildProcess::time() const
     return  std::chrono::high_resolution_clock::now() - m_startTime;
 }
 
-const unsigned long VSDChildProcess::id() const
+unsigned long VSDChildProcess::id() const
 {
     return m_id;
 }
 
-const int VSDChildProcess::exitCode() const
+int VSDChildProcess::exitCode() const
 {
     return m_exitCode;
 }

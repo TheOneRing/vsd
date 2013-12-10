@@ -126,7 +126,7 @@ public:
         CloseHandle(m_hout);
     }
 
-    int initLog(wchar_t *in[],int pos,int len)
+    inline int initLog(wchar_t *in[],int pos,int len)
     {
         if(pos+1<len)
         {
@@ -139,7 +139,7 @@ public:
         return pos;
     }
 
-    int initBenchmark(wchar_t *in[],int pos,int len)
+    inline int initBenchmark(wchar_t *in[],int pos,int len)
     {
         m_noOutput = true;
         if(pos+1<len)
@@ -158,7 +158,7 @@ public:
     }
 
 
-    void run()
+    inline void run()
     {
         std::chrono::system_clock::duration time(0);
         for(int i = 1;m_run && i<=m_iterations;++i)
@@ -180,7 +180,7 @@ public:
         std::wcout << std::endl;
     }
 
-    void htmlHEADER(const std::wstring &program,const std::wstring &arguments)
+    inline void htmlHEADER(const std::wstring &program,const std::wstring &arguments)
     {
         if(!m_html)
             return;
@@ -199,20 +199,20 @@ public:
 
     }
 
-    void htmlFOOTER()
+    inline void htmlFOOTER()
     {
         if(!m_html)
             return;
         printFilePlain("</body>\n\n</html>\n");
     }
 
-    void printFilePlain(const std::string &data)
+    inline void printFilePlain(const std::string &data)
     {
         DWORD dwRead;
         WriteFile(m_log,data.c_str(), data.length() * sizeof(char), &dwRead,NULL);
     }
 
-    void printFile(const std::wstring &data,WORD color)
+    inline void printFile(const std::wstring &data,WORD color)
     {
         if(m_log == INVALID_HANDLE_VALUE)
             return;
@@ -249,7 +249,7 @@ public:
         }
     }
 
-    void print(const std::wstring &data,WORD color,bool printAlways = false)
+    inline void print(const std::wstring &data,WORD color,bool printAlways = false)
     {
         static std::mutex mutex;
         std::lock_guard<std::mutex> lock(mutex);
@@ -262,7 +262,7 @@ public:
         printFile(data,color);
     }
 
-    std::wstring getTimestamp(const std::chrono::system_clock::duration &time)
+    inline std::wstring getTimestamp(const std::chrono::system_clock::duration &time)
     {
         std::wstringstream out;
         out << std::chrono::duration_cast<std::chrono::hours>(time).count() << ":"
@@ -272,30 +272,30 @@ public:
         return out.str();
     }
 
-    void writeStdout(const std::wstring &data)
+    inline void writeStdout(const std::wstring &data)
     {
         print(data, m_consoleSettings.wAttributes);
     }
 
-    void writeErr(const std::wstring &data)
+    inline void writeErr(const std::wstring &data)
     {
         print(data, FOREGROUND_RED | FOREGROUND_INTENSITY);
     }
 
-    void writeDebug(const VSDChildProcess *process,const std::wstring &data)
+    inline void writeDebug(const VSDChildProcess *process,const std::wstring &data)
     {
         std::wstringstream ws;
         ws<<process->name() << "(" << process->id() << "): " << data;
         print(ws.str(), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
     }
-    void processStarted(const VSDChildProcess *process)
+    inline void processStarted(const VSDChildProcess *process)
     {
         std::wstringstream ws;
         ws << "Process Created: " << process->path() << " (" << process->id() << ")" <<std::endl;
         print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
-    void processStopped(const VSDChildProcess *process)
+    inline void processStopped(const VSDChildProcess *process)
     {
         std::wstringstream ws;
         ws << "Process Stopped: "
@@ -309,7 +309,7 @@ public:
         print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
-    void processDied(const VSDChildProcess *process)
+    inline void processDied(const VSDChildProcess *process)
     {
         std::wstringstream ws;
         ws << "Process Died: "
@@ -325,7 +325,7 @@ public:
         print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
-    void stop()
+    inline void stop()
     {
         m_run = false;
         m_process->stop();
@@ -352,6 +352,7 @@ static VSDImp *vsdimp = NULL;
 
 void sighandler(int sig)
 {
+    (void) sig;
     if(vsdimp != NULL)
     {
         vsdimp->stop();
