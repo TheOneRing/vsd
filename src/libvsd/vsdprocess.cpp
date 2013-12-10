@@ -138,7 +138,7 @@ public:
     {
     }
 
-    bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
+    inline bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
     {
         size_t maxPipeLen = 256;
         wchar_t *pipeName = new wchar_t[maxPipeLen];
@@ -202,7 +202,7 @@ public:
         return toUnicode(buff,len,IsTextUnicode(buff,len,NULL) == TRUE);
     }
 
-    void readDebugMSG(DEBUG_EVENT &debugEvent){
+    inline void readDebugMSG(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
 
@@ -227,13 +227,13 @@ public:
 
     }
 
-    void readProcessCreated(DEBUG_EVENT &debugEvent){
+    inline void readProcessCreated(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = new VSDChildProcess( m_client, debugEvent.dwProcessId, debugEvent.u.CreateProcessInfo.hFile);
         m_children[debugEvent.dwProcessId] = child;
         m_client->processStarted(child);
     }
 
-    void cleanup(VSDChildProcess *child,DEBUG_EVENT &debugEvent)
+    inline void cleanup(VSDChildProcess *child,DEBUG_EVENT &debugEvent)
     {
         m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
         m_time = child->time();
@@ -244,7 +244,7 @@ public:
         }
     }
 
-    void readProcessExited(DEBUG_EVENT &debugEvent){
+    inline void readProcessExited(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         child->processStopped(debugEvent.u.ExitProcess.dwExitCode);
         m_client->processStopped(child);
@@ -256,7 +256,51 @@ public:
         delete child;
     }
 
-    void readProcessRip(DEBUG_EVENT &debugEvent){
+#define exeptionString(x) case x : out << #x;break
+    inline DWORD readException(DEBUG_EVENT &debugEvent){
+        VSDChildProcess *child = m_children[debugEvent.dwProcessId];
+
+        if(debugEvent.u.Exception.dwFirstChance == 0)
+        {
+            std::wstringstream out;
+            out << L"Unhandled Exception: ";
+            switch(debugEvent.u.Exception.ExceptionRecord.ExceptionCode)
+            {
+            exeptionString(EXCEPTION_ACCESS_VIOLATION);
+            exeptionString(EXCEPTION_ARRAY_BOUNDS_EXCEEDED);
+            exeptionString(EXCEPTION_BREAKPOINT);
+            exeptionString(EXCEPTION_DATATYPE_MISALIGNMENT);
+            exeptionString(EXCEPTION_FLT_DENORMAL_OPERAND);
+            exeptionString(EXCEPTION_FLT_DIVIDE_BY_ZERO);
+            exeptionString(EXCEPTION_FLT_INEXACT_RESULT);
+            exeptionString(EXCEPTION_FLT_INVALID_OPERATION);
+            exeptionString(EXCEPTION_FLT_OVERFLOW);
+            exeptionString(EXCEPTION_FLT_STACK_CHECK);
+            exeptionString(EXCEPTION_FLT_UNDERFLOW);
+            exeptionString(EXCEPTION_ILLEGAL_INSTRUCTION);
+            exeptionString(EXCEPTION_IN_PAGE_ERROR);
+            exeptionString(EXCEPTION_INT_DIVIDE_BY_ZERO);
+            exeptionString(EXCEPTION_INT_OVERFLOW);
+            exeptionString(EXCEPTION_INVALID_DISPOSITION);
+            exeptionString(EXCEPTION_NONCONTINUABLE_EXCEPTION);
+            exeptionString(EXCEPTION_PRIV_INSTRUCTION);
+            exeptionString(EXCEPTION_SINGLE_STEP);
+            exeptionString(EXCEPTION_STACK_OVERFLOW);
+            }
+            out << std::endl;
+            m_client->writeErr(out.str());
+            m_client->processDied(child);
+            m_children.erase(child->id());
+            if(m_pi.dwProcessId == child->id())
+            {
+                cleanup(child,debugEvent);
+            }
+            delete child;
+        }
+        return DBG_EXCEPTION_NOT_HANDLED;
+    }
+
+    inline void readProcessRip(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         child->processDied(debugEvent.u.ExitProcess.dwExitCode,debugEvent.u.RipInfo.dwError);
         m_client->processDied(child);
@@ -268,7 +312,7 @@ public:
         delete child;
     }
 
-    void readOutput(Pipe &p){
+    inline void readOutput(Pipe &p){
         BOOL bSuccess = FALSE;
         DWORD dwRead;
         bSuccess = PeekNamedPipe(p.hRead, NULL, 0, NULL, &dwRead, NULL);
@@ -333,11 +377,11 @@ public:
                 case EXIT_PROCESS_DEBUG_EVENT:
                     readProcessExited(debug_event);
                     break;
-                case EXCEPTION_DEBUG_EVENT:
-                    status = debug_event.u.Exception.ExceptionRecord.ExceptionFlags==0?DBG_CONTINUE:DBG_EXCEPTION_NOT_HANDLED;
-                    break;
                 case RIP_EVENT:
                     readProcessRip(debug_event);
+                    break;
+                case EXCEPTION_DEBUG_EVENT:
+                    status  = readException(debug_event);
                     break;
                 default:
                     break;
