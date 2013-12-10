@@ -290,7 +290,6 @@ public:
             default:
                 out << debugEvent.u.Exception.ExceptionRecord.ExceptionCode;
             }
-            out << std::endl;
             child->processDied(debugEvent.u.ExitProcess.dwExitCode,out.str());
             m_client->processDied(child);
             m_children.erase(child->id());
