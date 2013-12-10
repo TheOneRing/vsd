@@ -48,7 +48,7 @@ void printHelp(){
 void printVersion(){
     std::wcout<<L"VSD version 0.6.0"<<std::endl<<
                 std::endl<<
-                L"Copyright (C) 2013  Patrick von Reth <vonreth@kde.org>"<<std::endl<<
+                L"Copyright (C) 2012-2013  Patrick von Reth <vonreth@kde.org>"<<std::endl<<
                 std::endl<<
                 L"VSD is free software: you can redistribute it and/or modify"<<std::endl<<
                 L"it under the terms of the GNU Lesser General Public License as published by"<<std::endl<<
