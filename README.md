@@ -6,7 +6,7 @@ Prints debugging messages of applications to console and supports logging of the
 It aims to be fast and simple.
 
 Help
-===
+==
     
 	Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]
 	Options:
@@ -18,7 +18,9 @@ Help
 	--help print this help
 	--version print version and copyright information
 
-![](http://winkde.org/~pvonreth/other/vsd/vsd.png)
+Example
+==
+![](http://winkde.org/~pvonreth/other/vsd/vsd3.png)
 
 The logfile for this [example](http://winkde.org/~pvonreth/other/vsd/dbg.html "example")
 
