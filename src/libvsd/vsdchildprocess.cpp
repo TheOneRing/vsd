@@ -106,8 +106,6 @@ void VSDChildProcess::processDied(const int exitCode,const int errorCode)
                                (LPWSTR) &error ,
                                0, NULL );
     m_error.copy((wchar_t*)error,len,0);
-    std::wcout<<L"Error: "<<errorCode<<L" "<<(wchar_t*)error<<std::endl;
-    std::wcout<<m_error.c_str()<<std::endl;
     LocalFree(error);
 }
 

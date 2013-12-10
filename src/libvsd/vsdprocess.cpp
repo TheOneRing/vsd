@@ -31,10 +31,8 @@
 #include <map>
 #include <time.h>
 #include <Shlwapi.h>
+#include <ntstatus.h>
 
-#ifndef PIPE_REJECT_REMOTE_CLIENTS
-#define PIPE_REJECT_REMOTE_CLIENTS 0x00000008
-#endif
 
 //inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp
 using namespace libvsd;
@@ -288,9 +286,12 @@ public:
             exeptionString(EXCEPTION_PRIV_INSTRUCTION);
             exeptionString(EXCEPTION_SINGLE_STEP);
             exeptionString(EXCEPTION_STACK_OVERFLOW);
+            exeptionString(STATUS_HEAP_CORRUPTION);
+            default:
+                out << debugEvent.u.Exception.ExceptionRecord.ExceptionCode;
             }
             out << std::endl;
-            m_client->writeErr(out.str());
+            child->processDied(debugEvent.u.ExitProcess.dwExitCode,out.str());
             m_client->processDied(child);
             m_children.erase(child->id());
             if(m_pi.dwProcessId == child->id())
