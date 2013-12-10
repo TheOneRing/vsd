@@ -242,6 +242,8 @@ public:
         {
             it.second->stop();
         }
+        readOutput(m_stdout);
+        readOutput(m_stderr);
     }
 
     inline void readProcessExited(DEBUG_EVENT &debugEvent){
@@ -389,9 +391,6 @@ public:
             }
             ContinueDebugEvent(debug_event.dwProcessId, debug_event.dwThreadId, status);
         }while(m_children.size()>0);
-
-        readOutput(m_stdout);
-        readOutput(m_stderr);
 
         CloseHandle( m_pi.hProcess );
         CloseHandle( m_pi.hThread );
