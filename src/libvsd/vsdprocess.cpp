@@ -243,6 +243,7 @@ public:
         }
 
         rtrim(out);
+        out.append(L"\n");
         m_client->writeDebug(child, out);
     }
 
