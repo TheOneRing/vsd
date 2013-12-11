@@ -37,16 +37,42 @@ public:
     VSDChildProcess(VSDClient *client, const unsigned long id, const HANDLE fileHandle);
     virtual ~VSDChildProcess();
 
-    const HANDLE& handle() const;
-    const std::wstring &path() const;
-    const std::wstring &name() const;
-    const std::wstring &error() const;
+    inline const HANDLE& handle() const
+    {
+        return m_handle;
+    }
+
+    inline const std::wstring &path() const
+    {
+        return m_path;
+    }
+
+    inline const std::wstring &name() const
+    {
+        return m_name;
+    }
+
+    inline const std::wstring &error() const
+    {
+        return m_error;
+    }
+
     const std::chrono::high_resolution_clock::duration time() const;
-    unsigned long id() const;
-    int exitCode() const;
+
+    inline unsigned long id() const
+    {
+        return m_id;
+    }
+
+    inline int exitCode() const
+    {
+        return m_exitCode;
+    }
 
     void processStopped(const int exitCode);
+
     void processDied(const int exitCode, const int error);
+
     void processDied(const int exitCode, std::wstring error);
 
     void stop();

@@ -21,58 +21,28 @@
 
 #include "vsdprocess.h"
 #include "vsdchildprocess.h"
+#include "utils.h"
+#include "vsdpipe.h"
 
 #include <windows.h>
 #include <winbase.h>
 #include <iostream>
 #include <sstream>
 
-#include <algorithm>
-#include <functional>
-#include <locale>
+
 #include <stdlib.h>
-#include <map>
+#include <unordered_map>
 #include <time.h>
 #include <shlwapi.h>
 #include <ntstatus.h>
 
 
-//inspired by https://qt.gitorious.org/qt-labs/jom/blobs/master/src/jomlib/process.cpp
 using namespace libvsd;
 
 static HANDLE SHUTDOWN_EVENT = CreateEvent(NULL, false, false, L"Shutdown Event");
 
 class VSDProcess::PrivateVSDProcess{
 public:
-    class Pipe
-    {
-    public:
-        Pipe() :
-            hWrite(INVALID_HANDLE_VALUE),
-            hRead(INVALID_HANDLE_VALUE)
-        {
-            ZeroMemory(&overlapped, sizeof(overlapped));
-        }
-
-
-        ~Pipe()
-        {
-            if (hWrite != INVALID_HANDLE_VALUE)
-                CloseHandle(hWrite);
-            if (hRead != INVALID_HANDLE_VALUE)
-                CloseHandle(hRead);
-        }
-
-        bool operator ==(const Pipe& p) const
-        {
-            return this->hWrite == p.hWrite && this->hRead == p.hRead;
-        }
-
-
-        HANDLE hWrite;
-        HANDLE hRead;
-        OVERLAPPED overlapped;
-    };
 
     PrivateVSDProcess(const std::wstring &program, const std::wstring &arguments, VSDClient *client) :
         m_client(client),
@@ -113,13 +83,13 @@ public:
         sa.bInheritHandle = TRUE;
 
 
-        if (!setupPipe(m_stdout, &sa))
+        if (!m_stdout.setup(&sa))
         {
             std::wcerr << L"Cannot setup pipe for stdout." << std::endl;
             exit(1);
         }
 
-        if (!setupPipe(m_stderr, &sa))
+        if (!m_stderr.setup(&sa))
         {
             std::wcerr << L"Cannot setup pipe for stderr." << std::endl;
             exit(1);
@@ -137,78 +107,6 @@ public:
 
     ~PrivateVSDProcess()
     {
-    }
-
-    inline void rtrim(std::wstring &s) {
-        std::locale loc;
-        s.erase(std::find_if(s.rbegin(), s.rend(), [&](wchar_t &t) -> bool { return !std::isspace(t, loc); }).base(), s.end());
-    }
-
-    inline bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
-    {
-        size_t maxPipeLen = 256;
-        wchar_t *pipeName = new wchar_t[maxPipeLen];
-        unsigned int randomValue;
-        if (rand_s(&randomValue) != 0)
-        {
-            randomValue = rand();
-        }
-        swprintf_s(pipeName, maxPipeLen, L"\\\\.\\pipe\\vsd-%X", randomValue);
-
-        DWORD dwPipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
-        const DWORD dwPipeBufferSize = 1024 * 1024;
-
-        pipe.hRead = CreateNamedPipe(pipeName,
-                                     PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-                                     dwPipeMode,
-                                     1,                      // only one pipe instance
-                                     0,                      // output buffer size
-                                     dwPipeBufferSize,       // input buffer size
-                                     0,
-                                     sa);
-        if (pipe.hRead == INVALID_HANDLE_VALUE){
-            std::wcerr << L"Creation of the NamedPipe " << pipeName << L" failed " << GetLastError() << std::endl;
-            return false;
-        }
-
-
-        pipe.hWrite = CreateFile(pipeName,
-                                 GENERIC_WRITE,
-                                 0,
-                                 sa,
-                                 OPEN_EXISTING,
-                                 FILE_FLAG_OVERLAPPED,
-                                 NULL);
-        if (pipe.hWrite == INVALID_HANDLE_VALUE){
-            std::wcerr << L"Creation of the pipe " << pipeName << L" failed " << GetLastError() << std::endl;
-            return false;
-        }
-        ConnectNamedPipe(pipe.hRead, NULL);
-        return true;
-    }
-
-
-    inline std::wstring toUnicode(char *buff, int len, bool isUnicode)
-    {
-        std::wstring out;
-        if (isUnicode)
-        {
-            out = std::wstring((wchar_t*)buff, (len + 1) / sizeof(wchar_t));
-        }
-        else
-        {
-            wchar_t *wcharBuffer = new wchar_t[len+1];
-            std::locale loc;
-            std::use_facet< std::ctype<wchar_t> >(loc).widen(buff, buff + len + 1, wcharBuffer);
-            out = std::wstring(wcharBuffer, len);
-            delete[] wcharBuffer;
-        }
-        return out;
-    }
-
-    inline std::wstring toUnicode(char *buff, int len)
-    {
-        return toUnicode(buff, len, IsTextUnicode(buff, len, NULL) == TRUE);
     }
 
     inline void readDebugMSG(DEBUG_EVENT &debugEvent){
@@ -229,11 +127,11 @@ public:
         {
             char *buffer = new char[DebugString.nDebugStringLength];
             ReadProcessMemory(child->handle(), DebugString.lpDebugStringData, buffer, DebugString.nDebugStringLength, NULL);
-            out = toUnicode(buffer, DebugString.nDebugStringLength, false);
+            out = VSDUtils::toUnicode(buffer, DebugString.nDebugStringLength, false);
             delete[] buffer;
         }
 
-        rtrim(out);
+        VSDUtils::rtrim(out);//remove wrong indent in the next line
         out.append(L"\n");
         m_client->writeDebug(child, out);
     }
@@ -246,27 +144,27 @@ public:
 
     inline void cleanup(VSDChildProcess *child, DEBUG_EVENT &debugEvent)
     {
-        m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
-        m_time = child->time();
-
-        for (auto it : m_children)//first stop everything and then cleanup
+        m_client->processStopped(child);
+        m_children.erase(child->id());
+        if(m_pi.dwProcessId == child->id())
         {
-            it.second->stop();
+            m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
+            m_time = child->time();
+
+            for (auto it : m_children)//first stop everything and then cleanup
+            {
+                it.second->stop();
+            }
+            readOutput(m_stdout);
+            readOutput(m_stderr);
         }
-        readOutput(m_stdout);
-        readOutput(m_stderr);
+        delete child;
     }
 
     inline void readProcessExited(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         child->processStopped(debugEvent.u.ExitProcess.dwExitCode);
-        m_client->processStopped(child);
-        m_children.erase(child->id());
-        if (m_pi.dwProcessId == child->id())
-        {
-            cleanup(child, debugEvent);
-        }
-        delete child;
+        cleanup(child, debugEvent);
     }
 
 #define exeptionString(x) case x : out << #x;break
@@ -304,7 +202,6 @@ public:
                 out << debugEvent.u.Exception.ExceptionRecord.ExceptionCode;
             }
             child->processDied(debugEvent.u.ExitProcess.dwExitCode, out.str());
-            m_client->processDied(child);//TODO: maybe another methode call
             //dont delete child !!
         }
         return DBG_EXCEPTION_NOT_HANDLED;
@@ -313,16 +210,11 @@ public:
     inline void readProcessRip(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         child->processDied(debugEvent.u.ExitProcess.dwExitCode, debugEvent.u.RipInfo.dwError);
-        m_client->processDied(child);
-        m_children.erase(child->id());
-        if (m_pi.dwProcessId == child->id())
-        {
-            cleanup(child, debugEvent);
-        }
-        delete child;
+        cleanup(child, debugEvent);
     }
 
-    inline void readOutput(Pipe &p){
+    inline void readOutput(VSDPipe &p)
+    {
         BOOL bSuccess = FALSE;
         DWORD dwRead;
         bSuccess = PeekNamedPipe(p.hRead, NULL, 0, NULL, &dwRead, NULL);
@@ -331,7 +223,7 @@ public:
             char *charBuffer = new char[dwRead + 1];
             if (ReadFile(p.hRead, charBuffer, dwRead, NULL, &p.overlapped))
             {
-                std::wstring out(toUnicode(charBuffer, dwRead));
+                std::wstring out(VSDUtils::toUnicode(charBuffer, dwRead));
                 out.append(L"\n");
                 if (p == m_stdout)
                 {
@@ -347,17 +239,24 @@ public:
         }
     }
 
-    int run(){
+    int run()
+    {
+
+        unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
 
         if (m_program.size() == 0)
+        {
             return -1;
-        unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
+        }
         if (m_debugSubProcess)
+        {
             debugConfig = DEBUG_PROCESS;
+        }
 
         std::wstringstream tmp;
         tmp << "\"" << m_program << "\" " << m_arguments;
-        if (!CreateProcess((wchar_t*)m_program.c_str(), (wchar_t*)tmp.str().c_str(), NULL, NULL, TRUE, debugConfig, NULL, NULL, &m_si, &m_pi)){
+        if (!CreateProcess((wchar_t*)m_program.c_str(), (wchar_t*)tmp.str().c_str(), NULL, NULL, TRUE, debugConfig, NULL, NULL, &m_si, &m_pi))
+        {
             std::wstringstream ws;
             ws << "Failed to start " << m_program << " " << m_arguments << " " << GetLastError() << std::endl;
             m_client->writeErr(ws.str());
@@ -453,10 +352,10 @@ public:
 
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
-    Pipe m_stdout;
-    Pipe m_stderr;
+    VSDPipe m_stdout;
+    VSDPipe m_stderr;
 
-    std::map <unsigned long, VSDChildProcess*> m_children;
+    std::unordered_map <unsigned long, VSDChildProcess*> m_children;
 };
 
 VSDClient::VSDClient()

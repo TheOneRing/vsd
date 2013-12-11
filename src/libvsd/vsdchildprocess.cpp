@@ -53,36 +53,13 @@ VSDChildProcess::~VSDChildProcess()
     CloseHandle(m_handle);
 }
 
-const HANDLE &VSDChildProcess::handle() const
-{
-    return m_handle;
-}
-
-const std::wstring &VSDChildProcess::path() const
-{
-    return m_path;
-}
-
-const std::wstring &VSDChildProcess::name() const
-{
-    return m_name;
-}
-
 const std::chrono::system_clock::duration VSDChildProcess::time() const
 {
     if (m_exitCode != STILL_ACTIVE)
+    {
         return m_duration;
+    }
     return  std::chrono::high_resolution_clock::now() - m_startTime;
-}
-
-unsigned long VSDChildProcess::id() const
-{
-    return m_id;
-}
-
-int VSDChildProcess::exitCode() const
-{
-    return m_exitCode;
 }
 
 void VSDChildProcess::processStopped(const int exitCode)
@@ -124,10 +101,4 @@ void VSDChildProcess::stop()
         m_client->writeErr(ws.str());
         TerminateProcess(handle(), 0);
     }
-}
-
-
-const std::wstring &libvsd::VSDChildProcess::error() const
-{
-    return m_error;
 }

@@ -300,24 +300,13 @@ public:
         std::wstringstream ws;
         ws << "Process Stopped: "
            << process->path()
-           << " (" << process->id() << ")"
-           << " With exit Code: "
-           << process->exitCode()
-           << " After: "
-           << getTimestamp(process->time())
-           << std::endl;
-        print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-    }
-
-    inline void processDied(const VSDChildProcess *process)
-    {
-        std::wstringstream ws;
-        ws << "Process Died: "
-           << process->path()
-           << " (" << process->id() << ")"
-           << " Error: "
-           << process->error()
-           << " With exit Code: "
+           << " (" << process->id() << ")";
+        if(!process->error().empty())
+        {
+            ws << " Error: "
+               << process->error();
+        }
+        ws << " With exit Code: "
            << process->exitCode()
            << " After: "
            << getTimestamp(process->time())
