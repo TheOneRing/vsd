@@ -182,17 +182,17 @@ public:
         cleanup(child, debugEvent);
     }
 
-    inline void readOutput(VSDPipe &p)
+    inline void readOutput(VSDPipe *p)
     {
-        if(p.isValid())
+        if(p && p->isValid())
         {
             BOOL bSuccess = FALSE;
             DWORD dwRead;
-            bSuccess = PeekNamedPipe(p.hRead, NULL, 0, NULL, &dwRead, NULL);
+            bSuccess = PeekNamedPipe(p->hRead, NULL, 0, NULL, &dwRead, NULL);
             if (bSuccess && dwRead > 0)
             {
                 char *charBuffer = new char[dwRead + 1];
-                if (ReadFile(p.hRead, charBuffer, dwRead, NULL, &p.overlapped))
+                if (ReadFile(p->hRead, charBuffer, dwRead, NULL, &p->overlapped))
                 {
                     std::wstring out(VSDUtils::toUnicode(charBuffer, dwRead));
                     out.append(L"\n");
@@ -224,27 +224,25 @@ public:
         m_si.cb = sizeof(m_si);
         m_si.dwFlags |= STARTF_USESTDHANDLES;
 
-        if (!m_stdout.setup(&sa))
+        m_stdout = new VSDPipe(&sa);
+        if (!m_stdout->isValid())
         {
             std::wcerr << L"Failed to setup pipe for stdout." << std::endl;
             exit(1);
         }
 
-        m_si.hStdOutput = m_stdout.hWrite;
+        m_si.hStdOutput = m_stdout->hWrite;
+        m_si.hStdError = m_stdout->hWrite;
 
         if(channelMode != VSDProcess::MergedChannels)
         {
-
-            if (!m_stderr.setup(&sa))
+            m_stderr = new VSDPipe(&sa);
+            if (!m_stderr->isValid())
             {
                 std::wcerr << L"Failed to setup pipe for stderr." << std::endl;
                 exit(1);
             }
-            m_si.hStdError = m_stderr.hWrite;
-        }
-        else
-        {
-            m_si.hStdError = m_stdout.hWrite;
+            m_si.hStdError = m_stderr->hWrite;
         }
 
         ZeroMemory(&m_pi, sizeof(m_pi));
@@ -308,6 +306,13 @@ public:
 
         CloseHandle(m_pi.hProcess);
         CloseHandle(m_pi.hThread);
+        delete m_stdout;
+        m_stdout = NULL;
+        if(m_stderr)
+        {
+            delete m_stderr;
+            m_stderr = NULL;
+        }
         return m_exitCode;
     }
 
@@ -359,8 +364,8 @@ public:
 
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
-    VSDPipe m_stdout;
-    VSDPipe m_stderr;
+    VSDPipe *m_stdout = NULL;
+    VSDPipe *m_stderr = NULL;
 
     std::unordered_map <unsigned long, VSDChildProcess*> m_children;
 };

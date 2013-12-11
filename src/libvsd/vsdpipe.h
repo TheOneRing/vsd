@@ -28,11 +28,55 @@
 class VSDPipe
 {
 public:
-    VSDPipe() :
+    VSDPipe(SECURITY_ATTRIBUTES *sa) :
         hWrite(INVALID_HANDLE_VALUE),
         hRead(INVALID_HANDLE_VALUE)
     {
         ZeroMemory(&overlapped, sizeof(overlapped));
+
+        size_t maxPipeLen = 256;
+        wchar_t *pipeName = new wchar_t[maxPipeLen];
+        unsigned int randomValue;
+        if (rand_s(&randomValue) != 0)
+        {
+            randomValue = rand();
+        }
+        swprintf_s(pipeName, maxPipeLen, L"\\\\.\\pipe\\vsd-%X", randomValue);
+
+        DWORD dwPipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
+        const DWORD dwPipeBufferSize = 1024 * 1024;
+
+        hRead = CreateNamedPipe(pipeName,
+                                PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+                                dwPipeMode,
+                                1,                      // only one pipe instance
+                                0,                      // output buffer size
+                                dwPipeBufferSize,       // input buffer size
+                                0,
+                                sa);
+        if (hRead == INVALID_HANDLE_VALUE){
+            std::wcerr << L"Creation of the NamedPipe " << pipeName << L" failed " << GetLastError() << std::endl;
+            return;
+        }
+
+
+        hWrite = CreateFile(pipeName,
+                            GENERIC_WRITE,
+                            0,
+                            sa,
+                            OPEN_EXISTING,
+                            FILE_FLAG_OVERLAPPED,
+                            NULL);
+        if (hWrite == INVALID_HANDLE_VALUE){
+            std::wcerr << L"Creation of the pipe " << pipeName << L" failed " << GetLastError() << std::endl;
+            return;
+        }
+        ConnectNamedPipe(hRead, NULL);
+    }
+
+    inline bool isValid() const
+    {
+        return hRead != INVALID_HANDLE_VALUE || hWrite != INVALID_HANDLE_VALUE;
     }
 
 
@@ -48,58 +92,11 @@ public:
         }
     }
 
-    inline bool isValid() const
-    {
-        return hRead != INVALID_HANDLE_VALUE || hWrite != INVALID_HANDLE_VALUE;
-    }
-
     inline bool operator ==(const VSDPipe& p) const
     {
         return hWrite == p.hWrite && hRead == p.hRead;
     }
 
-    inline bool setup(SECURITY_ATTRIBUTES *sa)
-    {
-        size_t maxPipeLen = 256;
-        wchar_t *pipeName = new wchar_t[maxPipeLen];
-        unsigned int randomValue;
-        if (rand_s(&randomValue) != 0)
-        {
-            randomValue = rand();
-        }
-        swprintf_s(pipeName, maxPipeLen, L"\\\\.\\pipe\\vsd-%X", randomValue);
-
-        DWORD dwPipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
-        const DWORD dwPipeBufferSize = 1024 * 1024;
-
-        hRead = CreateNamedPipe(pipeName,
-                                     PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-                                     dwPipeMode,
-                                     1,                      // only one pipe instance
-                                     0,                      // output buffer size
-                                     dwPipeBufferSize,       // input buffer size
-                                     0,
-                                     sa);
-        if (hRead == INVALID_HANDLE_VALUE){
-            std::wcerr << L"Creation of the NamedPipe " << pipeName << L" failed " << GetLastError() << std::endl;
-            return false;
-        }
-
-
-        hWrite = CreateFile(pipeName,
-                                 GENERIC_WRITE,
-                                 0,
-                                 sa,
-                                 OPEN_EXISTING,
-                                 FILE_FLAG_OVERLAPPED,
-                                 NULL);
-        if (hWrite == INVALID_HANDLE_VALUE){
-            std::wcerr << L"Creation of the pipe " << pipeName << L" failed " << GetLastError() << std::endl;
-            return false;
-        }
-        ConnectNamedPipe(hRead, NULL);
-        return true;
-    }
 
 
     HANDLE hWrite;
