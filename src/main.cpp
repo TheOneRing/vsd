@@ -16,7 +16,7 @@
 
     You should have received a copy of the GNU Lesser General Public License
     along with VSD.  If not, see <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #include "libvsd/vsdprocess.h"
 #include "libvsd/vsdchildprocess.h"
@@ -33,77 +33,77 @@
 using namespace libvsd;
 
 void printHelp(){
-    std::wcout<<L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]"<<std::endl<<
-                L"Options:"<<std::endl<<
-                L"--vsd-log logFile \t\t Write a log in colored html to logFile"<<std::endl<<
-                L"--vsd-logplain logFile \t\t Write a log to logFile"<<std::endl<<
-                L"--vsd-all\t\t\t Debug also all processes created by TARGET_APPLICATION"<<std::endl<<
-                L"--vsd-nc \t\t\t Monochrome output"<<std::endl<<
-                L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome"<<std::endl<<
-                L"--help \t\t\t\t print this help"<<std::endl<<
-                L"--version\t\t\t print version and copyright information"<<std::endl;
+    std::wcout << L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]" << std::endl <<
+                  L"Options:" << std::endl <<
+                  L"--vsd-log logFile \t\t Write a log in colored html to logFile" << std::endl <<
+                  L"--vsd-logplain logFile \t\t Write a log to logFile" << std::endl <<
+                  L"--vsd-all\t\t\t Debug also all processes created by TARGET_APPLICATION" << std::endl <<
+                  L"--vsd-nc \t\t\t Monochrome output" << std::endl <<
+                  L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome" << std::endl <<
+                  L"--help \t\t\t\t print this help" << std::endl <<
+                  L"--version\t\t\t print version and copyright information" << std::endl;
     exit(0);
 }
 
 void printVersion(){
-    std::wcout<<L"VSD version 0.6.0"<<std::endl<<
-                std::endl<<
-                L"Copyright (C) 2012-2013  Patrick von Reth <vonreth@kde.org>"<<std::endl<<
-                std::endl<<
-                L"VSD is free software: you can redistribute it and/or modify"<<std::endl<<
-                L"it under the terms of the GNU Lesser General Public License as published by"<<std::endl<<
-                L"the Free Software Foundation, either version 3 of the License, or"<<std::endl<<
-                L"(at your option) any later version."<<std::endl;
+    std::wcout << L"VSD version 0.6.0" << std::endl <<
+                  std::endl <<
+                  L"Copyright (C) 2012-2013  Patrick von Reth <vonreth@kde.org>" << std::endl <<
+                  std::endl <<
+                  L"VSD is free software: you can redistribute it and/or modify" << std::endl <<
+                  L"it under the terms of the GNU Lesser General Public License as published by" << std::endl <<
+                  L"the Free Software Foundation, either version 3 of the License, or" << std::endl <<
+                  L"(at your option) any later version." << std::endl;
     exit(0);
 }
 
-class VSDImp: public VSDClient{
+class VSDImp : public VSDClient{
 public:
-    VSDImp(wchar_t *in[],int len)
+    VSDImp(wchar_t *in[], int len)
     {
         std::wstring program(in[1]);
         std::wstringstream arguments;
         bool withSubProcess = false;
-        for(int i=1;i<len;++i)
+        for (int i = 1; i < len; ++i)
         {
             std::wstring arg(in[i]);
-            if(arg == L"--vsd-log")
+            if (arg == L"--vsd-log")
             {
-                i = initLog(in,i,len);
+                i = initLog(in, i, len);
             }
-            else if(arg == L"--vsd-logplain")
+            else if (arg == L"--vsd-logplain")
             {
                 m_html = false;
-                i = initLog(in,i,len);
+                i = initLog(in, i, len);
             }
-            else  if(arg == L"--vsd-all")
+            else  if (arg == L"--vsd-all")
             {
                 withSubProcess = true;
             }
-            else  if(arg == L"--vsd-nc")
+            else  if (arg == L"--vsd-nc")
             {
                 m_colored = false;
             }
-            else if(arg == L"--vsd-benchmark")
+            else if (arg == L"--vsd-benchmark")
             {
-                i = initBenchmark(in,i,len);
+                i = initBenchmark(in, i, len);
             }
-            else  if(arg == L"--help")
+            else  if (arg == L"--help")
             {
                 printHelp();
             }
-            else  if(arg == L"--version")
+            else  if (arg == L"--version")
             {
                 printVersion();
             }
-            else if(i>1)
+            else if (i > 1)
             {
-                arguments<<"\""<<arg<<"\" ";
+                arguments << "\"" << arg << "\" ";
             }
         }
 
-        m_hout = GetStdHandle( STD_OUTPUT_HANDLE  );
-        GetConsoleScreenBufferInfo( m_hout, &m_consoleSettings);
+        m_hout = GetStdHandle(STD_OUTPUT_HANDLE);
+        GetConsoleScreenBufferInfo(m_hout, &m_consoleSettings);
 
         htmlHEADER(program, arguments.str());
         std::wstringstream ws;
@@ -118,19 +118,19 @@ public:
     {
 
         delete m_process;
-        if(m_log != INVALID_HANDLE_VALUE){
+        if (m_log != INVALID_HANDLE_VALUE){
             htmlFOOTER();
             CloseHandle(m_log);
         }
-        SetConsoleTextAttribute( m_hout, m_consoleSettings.wAttributes );
+        SetConsoleTextAttribute(m_hout, m_consoleSettings.wAttributes);
         CloseHandle(m_hout);
     }
 
-    inline int initLog(wchar_t *in[],int pos,int len)
+    inline int initLog(wchar_t *in[], int pos, int len)
     {
-        if(pos+1<len)
+        if (pos + 1 < len)
         {
-            m_log = CreateFile(in[++pos], GENERIC_WRITE, FILE_SHARE_READ, NULL,CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+            m_log = CreateFile(in[++pos], GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         }
         else
         {
@@ -139,13 +139,13 @@ public:
         return pos;
     }
 
-    inline int initBenchmark(wchar_t *in[],int pos,int len)
+    inline int initBenchmark(wchar_t *in[], int pos, int len)
     {
         m_noOutput = true;
-        if(pos+1<len)
+        if (pos + 1 < len)
         {
             m_iterations = _wtoi(in[++pos]);
-            if(m_iterations == 0)
+            if (m_iterations == 0)
             {
                 printHelp();
             }
@@ -161,47 +161,47 @@ public:
     inline void run()
     {
         std::chrono::system_clock::duration time(0);
-        for(int i = 1;m_run && i<=m_iterations;++i)
+        for (int i = 1; m_run && i <= m_iterations; ++i)
         {
             m_exitCode = m_process->run();
             time += m_process->time();
-            if(m_iterations>1)
+            if (m_iterations > 1)
             {
                 std::wstringstream ws;
                 ws << "\rBenchmark iteration: "
                    << i
                    << ", mean execution time: "
-                   << getTimestamp(time/i)
+                   << getTimestamp(time / i)
                    << " total execution time "
                    << getTimestamp(time);
-                print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY,true);
+                print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY, true);
             }
         }
         std::wcout << std::endl;
     }
 
-    inline void htmlHEADER(const std::wstring &program,const std::wstring &arguments)
+    inline void htmlHEADER(const std::wstring &program, const std::wstring &arguments)
     {
-        if(!m_html)
+        if (!m_html)
             return;
         std::stringstream ss;
-        ss<<"<!DOCTYPE html>\n"<<
-            "<html>\n"<<
-            "<head>\n"<<
-            "<meta charset=\"UTF-8\" />\n"<<
-            "<title>VSD "<<
-            std::string(program.begin(),program.end())<<" "<<
-            std::string(arguments.begin(),arguments.end())<<
-            "</title>\n"<<
-            "</head>\n"<<
-            "<body>";
+        ss << "<!DOCTYPE html>\n" <<
+              "<html>\n" <<
+              "<head>\n" <<
+              "<meta charset=\"UTF-8\" />\n" <<
+              "<title>VSD " <<
+              std::string(program.begin(), program.end()) << " " <<
+              std::string(arguments.begin(), arguments.end()) <<
+              "</title>\n" <<
+              "</head>\n" <<
+              "<body>";
         printFilePlain(ss.str());
 
     }
 
     inline void htmlFOOTER()
     {
-        if(!m_html)
+        if (!m_html)
             return;
         printFilePlain("</body>\n\n</html>\n");
     }
@@ -209,66 +209,66 @@ public:
     inline void printFilePlain(const std::string &data)
     {
         DWORD dwRead;
-        WriteFile(m_log,data.c_str(), data.length() * sizeof(char), &dwRead,NULL);
+        WriteFile(m_log, data.c_str(), data.length() * sizeof(char), &dwRead, NULL);
     }
 
-    inline void printFile(const std::wstring &data,WORD color)
+    inline void printFile(const std::wstring &data, WORD color)
     {
-        if(m_log == INVALID_HANDLE_VALUE)
+        if (m_log == INVALID_HANDLE_VALUE)
             return;
         std::stringstream ss;
         DWORD dwRead;
-        if(m_html && color != 0)
+        if (m_html && color != 0)
         {
-            ss<<"<p style=\"color:";
-            switch(color)
+            ss << "<p style=\"color:";
+            switch (color)
             {
             case FOREGROUND_BLUE:
             case FOREGROUND_BLUE | FOREGROUND_INTENSITY:
-                ss<<"blue";
+                ss << "blue";
                 break;
             case FOREGROUND_GREEN:
             case FOREGROUND_GREEN | FOREGROUND_INTENSITY:
-                ss<<"green";
+                ss << "green";
                 break;
             case FOREGROUND_RED:
             case FOREGROUND_RED | FOREGROUND_INTENSITY:
-                ss<<"red";
+                ss << "red";
                 break;
             default:
-                ss<<"black";
+                ss << "black";
             }
-            ss<<"\">";
+            ss << "\">";
             printFilePlain(ss.str());
-            WriteFile(m_log,data.c_str(), data.size()* sizeof(wchar_t), &dwRead,NULL);
+            WriteFile(m_log, data.c_str(), data.size()* sizeof(wchar_t), &dwRead, NULL);
             printFilePlain("</p>\n");
         }
         else
         {
-            WriteFile(m_log,data.c_str(), data.size()* sizeof(wchar_t), &dwRead,NULL);
+            WriteFile(m_log, data.c_str(), data.size()* sizeof(wchar_t), &dwRead, NULL);
         }
     }
 
-    inline void print(const std::wstring &data,WORD color,bool printAlways = false)
+    inline void print(const std::wstring &data, WORD color, bool printAlways = false)
     {
         static std::mutex mutex;
         std::lock_guard<std::mutex> lock(mutex);
-        if(printAlways || !m_noOutput)
+        if (printAlways || !m_noOutput)
         {
-            if( m_colored )
-                SetConsoleTextAttribute( m_hout, color);
-            std::wcout<<data;
+            if (m_colored)
+                SetConsoleTextAttribute(m_hout, color);
+            std::wcout << data;
         }
-        printFile(data,color);
+        printFile(data, color);
     }
 
     inline std::wstring getTimestamp(const std::chrono::system_clock::duration &time)
     {
         std::wstringstream out;
         out << std::chrono::duration_cast<std::chrono::hours>(time).count() << ":"
-            << std::chrono::duration_cast<std::chrono::minutes>(time).count()%60 << ":"
-            << std::chrono::duration_cast<std::chrono::seconds>(time).count()%60 << ":"
-            << std::chrono::duration_cast<std::chrono::milliseconds>(time).count()%1000;
+            << std::chrono::duration_cast<std::chrono::minutes>(time).count() % 60 << ":"
+            << std::chrono::duration_cast<std::chrono::seconds>(time).count() % 60 << ":"
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time).count() % 1000;
         return out.str();
     }
 
@@ -282,16 +282,16 @@ public:
         print(data, FOREGROUND_RED | FOREGROUND_INTENSITY);
     }
 
-    inline void writeDebug(const VSDChildProcess *process,const std::wstring &data)
+    inline void writeDebug(const VSDChildProcess *process, const std::wstring &data)
     {
         std::wstringstream ws;
-        ws<<process->name() << "(" << process->id() << "): " << data;
+        ws << process->name() << "(" << process->id() << "): " << data;
         print(ws.str(), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
     }
     inline void processStarted(const VSDChildProcess *process)
     {
         std::wstringstream ws;
-        ws << "Process Created: " << process->path() << " (" << process->id() << ")" <<std::endl;
+        ws << "Process Created: " << process->path() << " (" << process->id() << ")" << std::endl;
         print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
@@ -306,7 +306,7 @@ public:
            << " After: "
            << getTimestamp(process->time())
            << std::endl;
-        print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
     inline void processDied(const VSDChildProcess *process)
@@ -322,7 +322,7 @@ public:
            << " After: "
            << getTimestamp(process->time())
            << std::endl;
-        print(ws.str(),  FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
     }
 
     inline void stop()
@@ -352,8 +352,8 @@ static VSDImp *vsdimp = NULL;
 
 void sighandler(int sig)
 {
-    (void) sig;
-    if(vsdimp != NULL)
+    (void)sig;
+    if (vsdimp != NULL)
     {
         vsdimp->stop();
     }
@@ -364,11 +364,11 @@ int main()
 {
     int argc;
     wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if(argc<2){
+    if (argc < 2){
         printHelp();
     }
 
-    vsdimp = new VSDImp(argv,argc);
+    vsdimp = new VSDImp(argv, argc);
 
     signal(SIGABRT, &sighandler);
     signal(SIGTERM, &sighandler);

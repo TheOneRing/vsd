@@ -16,7 +16,7 @@
 
     You should have received a copy of the GNU Lesser General Public License
     along with VSD.  If not, see <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #ifndef VSDPROCESS_H
 #define VSDPROCESS_H
@@ -39,7 +39,7 @@ public:
     virtual ~VSDClient();
     virtual void writeStdout(const std::wstring &data) = 0;
     virtual void writeErr(const std::wstring &data) = 0;
-    virtual void writeDebug(const VSDChildProcess *process,const std::wstring &data) = 0;
+    virtual void writeDebug(const VSDChildProcess *process, const std::wstring &data) = 0;
     virtual void processStarted(const VSDChildProcess* process) = 0;
     virtual void processStopped(const VSDChildProcess* process) = 0;
     virtual void processDied(const VSDChildProcess* process) = 0;
@@ -48,7 +48,7 @@ public:
 class LIBVSD_EXPORT VSDProcess
 {
 public:
-    VSDProcess(const std::wstring &program,const std::wstring &arguments,VSDClient *client);
+    VSDProcess(const std::wstring &program, const std::wstring &arguments, VSDClient *client);
     virtual ~VSDProcess();
 
     int run();

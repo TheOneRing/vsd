@@ -16,7 +16,7 @@
 
     You should have received a copy of the GNU Lesser General Public License
     along with VSD.  If not, see <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #include "vsdchildprocess.h"
 #include "vsdprocess.h"
@@ -42,10 +42,10 @@ VSDChildProcess::VSDChildProcess(VSDClient *client, const unsigned long id, cons
     m_exitCode(STILL_ACTIVE)
 {
     wchar_t buff[VSD_BUFLEN];
-    GetFinalPathNameByHandle(fileHandle,buff,VSD_BUFLEN,FILE_NAME_OPENED);
-    m_path = (buff+4);
-    m_name = m_path.substr(m_path.find_last_of('\\')+1);
-    m_name = m_name.substr(0,m_name.length()-4);
+    GetFinalPathNameByHandle(fileHandle, buff, VSD_BUFLEN, FILE_NAME_OPENED);
+    m_path = (buff + 4);
+    m_name = m_path.substr(m_path.find_last_of('\\') + 1);
+    m_name = m_name.substr(0, m_name.length() - 4);
 }
 
 VSDChildProcess::~VSDChildProcess()
@@ -70,7 +70,7 @@ const std::wstring &VSDChildProcess::name() const
 
 const std::chrono::system_clock::duration VSDChildProcess::time() const
 {
-    if(m_exitCode != STILL_ACTIVE)
+    if (m_exitCode != STILL_ACTIVE)
         return m_duration;
     return  std::chrono::high_resolution_clock::now() - m_startTime;
 }
@@ -91,7 +91,7 @@ void VSDChildProcess::processStopped(const int exitCode)
     m_exitCode = exitCode;
 }
 
-void VSDChildProcess::processDied(const int exitCode,const int errorCode)
+void VSDChildProcess::processDied(const int exitCode, const int errorCode)
 {
 
     processStopped(exitCode);
@@ -103,9 +103,9 @@ void VSDChildProcess::processDied(const int exitCode,const int errorCode)
                                NULL,
                                errorCode,
                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                               (LPWSTR) &error ,
-                               0, NULL );
-    m_error.copy((wchar_t*)error,len,0);
+                               (LPWSTR)&error,
+                               0, NULL);
+    m_error.copy((wchar_t*)error, len, 0);
     LocalFree(error);
 }
 
@@ -117,10 +117,10 @@ void VSDChildProcess::processDied(const int exitCode, std::wstring error)
 
 void VSDChildProcess::stop()
 {
-    if(m_exitCode == STILL_ACTIVE)
+    if (m_exitCode == STILL_ACTIVE)
     {
         std::wstringstream ws;
-        ws<<"Killing "<<path()<<" subprocess"<<std::endl;
+        ws << "Killing " << path() << " subprocess" << std::endl;
         m_client->writeErr(ws.str());
         TerminateProcess(handle(), 0);
     }

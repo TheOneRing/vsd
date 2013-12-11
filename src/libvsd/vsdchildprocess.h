@@ -16,7 +16,7 @@
 
     You should have received a copy of the GNU Lesser General Public License
     along with VSD.  If not, see <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #ifndef VSDCHILDPROCESS_H
 #define VSDCHILDPROCESS_H
@@ -52,7 +52,7 @@ public:
     void stop();
 
 private:
-    VSDClient  *m_client;    
+    VSDClient  *m_client;
     unsigned long m_id;
     HANDLE m_handle;
     std::wstring m_path;
