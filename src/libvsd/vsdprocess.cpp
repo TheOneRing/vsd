@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <map>
 #include <time.h>
-#include <Shlwapi.h>
+#include <shlwapi.h>
 #include <ntstatus.h>
 
 
@@ -136,6 +136,26 @@ public:
     {
     }
 
+    inline void rtrim(std::wstring &str)
+	{
+        auto rtrim = [&](const char w)
+		{
+			size_t found = str.find_last_not_of(w);
+			if (found != std::wstring::npos)
+			{
+				str.erase(found);
+			}
+			else
+			{
+				str.erase();
+			}
+        };
+        rtrim('\n');
+        rtrim('\r');
+        rtrim(' ');
+		std::wcout << str << std::endl;
+	}
+
     inline bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
     {
         size_t maxPipeLen = 256;
@@ -188,8 +208,8 @@ public:
         else
         {
             wchar_t *wcharBuffer = new wchar_t[len];
-            wcharBuffer[mbstowcs(wcharBuffer,buff,len)] = 0;
-            out = std::wstring(wcharBuffer);
+            MultiByteToWideChar(CP_ACP,0,buff,len,wcharBuffer,len);
+            out = std::wstring(wcharBuffer,len);
             delete [] wcharBuffer;
         }
         return out;
@@ -204,25 +224,26 @@ public:
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
         OUTPUT_DEBUG_STRING_INFO  &DebugString = debugEvent.u.DebugString;
 
-
+        std::wstring out;
         if(DebugString.fUnicode == TRUE)
         {
             size_t size = (DebugString.nDebugStringLength+1)/sizeof(wchar_t);
             wchar_t *buffer = new wchar_t[size];
             ZeroMemory(buffer,size);
             ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,buffer,DebugString.nDebugStringLength, NULL);
-            m_client->writeDebug(child,buffer);
+            out = buffer;
             delete [] buffer;
         }
         else
         {
             char *buffer = new char[DebugString.nDebugStringLength];
             ReadProcessMemory(child->handle(),DebugString.lpDebugStringData,buffer,DebugString.nDebugStringLength, NULL);
-            m_client->writeDebug(child,toUnicode(buffer,DebugString.nDebugStringLength,false));
+            out = toUnicode(buffer,DebugString.nDebugStringLength,false);
             delete [] buffer;
         }
 
-
+        rtrim(out);
+        m_client->writeDebug(child,out);
     }
 
     inline void readProcessCreated(DEBUG_EVENT &debugEvent){
@@ -291,13 +312,8 @@ public:
                 out << debugEvent.u.Exception.ExceptionRecord.ExceptionCode;
             }
             child->processDied(debugEvent.u.ExitProcess.dwExitCode,out.str());
-            m_client->processDied(child);
-            m_children.erase(child->id());
-            if(m_pi.dwProcessId == child->id())
-            {
-                cleanup(child,debugEvent);
-            }
-            delete child;
+            m_client->processDied(child);//TODO: maybe another methode call
+            //dont delete child !!
         }
         return DBG_EXCEPTION_NOT_HANDLED;
     }
