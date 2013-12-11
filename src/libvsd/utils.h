@@ -34,28 +34,15 @@ static inline void rtrim(std::wstring &s) {
 }
 
 
-static inline std::wstring toUnicode(char *buff, int len, bool isUnicode)
-{
-    std::wstring out;
-    if (isUnicode)
-    {
-        out = std::wstring((wchar_t*)buff, (len + 1) / sizeof(wchar_t));
-    }
-    else
-    {
-        wchar_t *wcharBuffer = new wchar_t[len+1];
-        std::locale loc;
-        std::use_facet< std::ctype<wchar_t> >(loc).widen(buff, buff + len + 1, wcharBuffer);
-        out = std::wstring(wcharBuffer, len);
-        delete[] wcharBuffer;
-    }
-    return out;
-}
-
 static inline std::wstring toUnicode(char *buff, int len)
 {
-    return toUnicode(buff, len, IsTextUnicode(buff, len, NULL) == TRUE);
+    std::wstring out;
+    wchar_t *wcharBuffer = new wchar_t[len+1];
+    std::locale loc;
+    std::use_facet< std::ctype<wchar_t> >(loc).widen(buff, buff + len + 1, wcharBuffer);
+    out = std::wstring(wcharBuffer, len);
+    delete[] wcharBuffer;
+    return out;
 }
-
 }
 #endif // UTILS_H

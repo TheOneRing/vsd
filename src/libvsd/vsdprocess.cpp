@@ -96,7 +96,7 @@ public:
         {
             char *buffer = new char[DebugString.nDebugStringLength];
             ReadProcessMemory(child->handle(), DebugString.lpDebugStringData, buffer, DebugString.nDebugStringLength, NULL);
-            out = VSDUtils::toUnicode(buffer, DebugString.nDebugStringLength, false);
+            out = VSDUtils::toUnicode(buffer, DebugString.nDebugStringLength);
             delete[] buffer;
         }
 
@@ -184,7 +184,7 @@ public:
 
     inline void readOutput(VSDPipe *p)
     {
-        if(p && p->isValid())
+        if(p)
         {
             BOOL bSuccess = FALSE;
             DWORD dwRead;
