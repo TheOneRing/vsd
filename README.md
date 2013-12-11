@@ -20,9 +20,9 @@ Help
 
 Example
 ==
-![](http://winkde.org/~pvonreth/other/vsd/vsd3.png)
+![](http://winkde.org/~pvonreth/other/vsd/vsd4.png)
 
-The logfile for this [example](http://winkde.org/~pvonreth/other/vsd/dbg.html "example")
+The logfile for this [example](http://winkde.org/~pvonreth/other/vsd/log.html "example")
 
 Colors
 ==
