@@ -48,6 +48,11 @@ public:
         }
     }
 
+    inline bool isValid() const
+    {
+        return hRead != INVALID_HANDLE_VALUE || hWrite != INVALID_HANDLE_VALUE;
+    }
+
     inline bool operator ==(const VSDPipe& p) const
     {
         return hWrite == p.hWrite && hRead == p.hRead;

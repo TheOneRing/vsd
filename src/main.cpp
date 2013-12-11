@@ -35,6 +35,7 @@ using namespace libvsd;
 void printHelp(){
     std::wcout << L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]" << std::endl <<
                   L"Options:" << std::endl <<
+                  L"--vsd-seperate-error \t\t\t Seperate stderr and stdout to identify sterr messages" <<
                   L"--vsd-log logFile \t\t Write a log in colored html to logFile" << std::endl <<
                   L"--vsd-logplain logFile \t\t Write a log to logFile" << std::endl <<
                   L"--vsd-all\t\t\t Debug also all processes created by TARGET_APPLICATION" << std::endl <<
@@ -67,7 +68,11 @@ public:
         for (int i = 1; i < len; ++i)
         {
             std::wstring arg(in[i]);
-            if (arg == L"--vsd-log")
+            if (arg == L"--vsd-seperate-error")
+            {
+                 m_channels = VSDProcess::SeperateChannels;
+            }
+            else if (arg == L"--vsd-log")
             {
                 i = initLog(in, i, len);
             }
@@ -163,7 +168,7 @@ public:
         std::chrono::system_clock::duration time(0);
         for (int i = 1; m_run && i <= m_iterations; ++i)
         {
-            m_exitCode = m_process->run();
+            m_exitCode = m_process->run(m_channels);
             time += m_process->time();
             if (m_iterations > 1)
             {
@@ -332,6 +337,7 @@ private:
     bool m_noOutput = false;
     int m_iterations = 1;
     bool m_run = true;
+    VSDProcess::ProcessChannelMode m_channels = VSDProcess::MergedChannels;
 
 
 };

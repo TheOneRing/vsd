@@ -58,9 +58,7 @@ public:
 
         if (PathFileExists(prog.c_str()))
         {
-
             GetFullPathName(prog.c_str(), MAX_PATH * 2, wprog, NULL);
-
         }
         else
         {
@@ -73,36 +71,7 @@ public:
                 return;
             }
         }
-
-        m_program = wprog;;
-
-
-        SECURITY_ATTRIBUTES sa;
-        ZeroMemory(&sa, sizeof(SECURITY_ATTRIBUTES));
-        sa.nLength = sizeof(sa);
-        sa.bInheritHandle = TRUE;
-
-
-        if (!m_stdout.setup(&sa))
-        {
-            std::wcerr << L"Cannot setup pipe for stdout." << std::endl;
-            exit(1);
-        }
-
-        if (!m_stderr.setup(&sa))
-        {
-            std::wcerr << L"Cannot setup pipe for stderr." << std::endl;
-            exit(1);
-        }
-
-        ZeroMemory(&m_si, sizeof(m_si));
-        m_si.cb = sizeof(m_si);
-        m_si.dwFlags |= STARTF_USESTDHANDLES;
-        m_si.hStdOutput = m_stdout.hWrite;
-        m_si.hStdError = m_stderr.hWrite;
-
-        ZeroMemory(&m_pi, sizeof(m_pi));
-
+        m_program = wprog;
     }
 
     ~PrivateVSDProcess()
@@ -215,32 +184,70 @@ public:
 
     inline void readOutput(VSDPipe &p)
     {
-        BOOL bSuccess = FALSE;
-        DWORD dwRead;
-        bSuccess = PeekNamedPipe(p.hRead, NULL, 0, NULL, &dwRead, NULL);
-        if (bSuccess && dwRead > 0)
+        if(p.isValid())
         {
-            char *charBuffer = new char[dwRead + 1];
-            if (ReadFile(p.hRead, charBuffer, dwRead, NULL, &p.overlapped))
+            BOOL bSuccess = FALSE;
+            DWORD dwRead;
+            bSuccess = PeekNamedPipe(p.hRead, NULL, 0, NULL, &dwRead, NULL);
+            if (bSuccess && dwRead > 0)
             {
-                std::wstring out(VSDUtils::toUnicode(charBuffer, dwRead));
-                out.append(L"\n");
-                if (p == m_stdout)
+                char *charBuffer = new char[dwRead + 1];
+                if (ReadFile(p.hRead, charBuffer, dwRead, NULL, &p.overlapped))
                 {
-                    m_client->writeStdout(out);
-                }
-                else
-                {
-                    m_client->writeErr(out);
-                }
+                    std::wstring out(VSDUtils::toUnicode(charBuffer, dwRead));
+                    out.append(L"\n");
+                    if (p == m_stdout)
+                    {
+                        m_client->writeStdout(out);
+                    }
+                    else
+                    {
+                        m_client->writeErr(out);
+                    }
 
+                }
+                delete[] charBuffer;
             }
-            delete[] charBuffer;
         }
     }
 
-    int run()
+    int run(VSDProcess::ProcessChannelMode channelMode)
     {
+
+        SECURITY_ATTRIBUTES sa;
+        ZeroMemory(&sa, sizeof(SECURITY_ATTRIBUTES));
+        sa.nLength = sizeof(sa);
+        sa.bInheritHandle = TRUE;
+
+
+        ZeroMemory(&m_si, sizeof(m_si));
+        m_si.cb = sizeof(m_si);
+        m_si.dwFlags |= STARTF_USESTDHANDLES;
+
+        if (!m_stdout.setup(&sa))
+        {
+            std::wcerr << L"Failed to setup pipe for stdout." << std::endl;
+            exit(1);
+        }
+
+        m_si.hStdOutput = m_stdout.hWrite;
+
+        if(channelMode != VSDProcess::MergedChannels)
+        {
+
+            if (!m_stderr.setup(&sa))
+            {
+                std::wcerr << L"Failed to setup pipe for stderr." << std::endl;
+                exit(1);
+            }
+            m_si.hStdError = m_stderr.hWrite;
+        }
+        else
+        {
+            m_si.hStdError = m_stdout.hWrite;
+        }
+
+        ZeroMemory(&m_pi, sizeof(m_pi));
 
         unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
 
@@ -379,9 +386,9 @@ VSDProcess::~VSDProcess()
     delete d;
 }
 
-int VSDProcess::run()
+int VSDProcess::run(VSDProcess::ProcessChannelMode channelMode)
 {
-    return d->run();
+    return d->run(channelMode);
 }
 
 void VSDProcess::stop()
