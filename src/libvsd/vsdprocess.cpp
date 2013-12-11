@@ -27,6 +27,9 @@
 #include <iostream>
 #include <sstream>
 
+#include <algorithm>
+#include <functional>
+#include <locale>
 #include <stdlib.h>
 #include <map>
 #include <time.h>
@@ -136,24 +139,9 @@ public:
     {
     }
 
-    inline void rtrim(std::wstring &str)
-    {
-        auto rtrim = [&](const char w)
-        {
-            size_t found = str.find_last_not_of(w);
-            if (found != std::wstring::npos)
-            {
-                str.erase(found);
-            }
-            else
-            {
-                str.erase();
-            }
-        };
-        rtrim('\n');
-        rtrim('\r');
-        rtrim(' ');
-        std::wcout << str << std::endl;
+    inline void rtrim(std::wstring &s) {
+        std::locale loc;
+        s.erase(std::find_if(s.rbegin(), s.rend(), [&](wchar_t &t) -> bool { return !std::isspace(t, loc); }).base(), s.end());
     }
 
     inline bool setupPipe(Pipe &pipe, SECURITY_ATTRIBUTES *sa)
@@ -162,7 +150,9 @@ public:
         wchar_t *pipeName = new wchar_t[maxPipeLen];
         unsigned int randomValue;
         if (rand_s(&randomValue) != 0)
+        {
             randomValue = rand();
+        }
         swprintf_s(pipeName, maxPipeLen, L"\\\\.\\pipe\\vsd-%X", randomValue);
 
         DWORD dwPipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
@@ -207,8 +197,9 @@ public:
         }
         else
         {
-            wchar_t *wcharBuffer = new wchar_t[len];
-            MultiByteToWideChar(CP_ACP, 0, buff, len, wcharBuffer, len);
+            wchar_t *wcharBuffer = new wchar_t[len+1];
+            std::locale loc;
+            std::use_facet< std::ctype<wchar_t> >(loc).widen(buff, buff + len + 1, wcharBuffer);
             out = std::wstring(wcharBuffer, len);
             delete[] wcharBuffer;
         }

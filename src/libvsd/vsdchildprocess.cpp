@@ -105,7 +105,7 @@ void VSDChildProcess::processDied(const int exitCode, const int errorCode)
                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                                (LPWSTR)&error,
                                0, NULL);
-    m_error.copy((wchar_t*)error, len, 0);
+    m_error = std::wstring((wchar_t*)error, len);
     LocalFree(error);
 }
 
