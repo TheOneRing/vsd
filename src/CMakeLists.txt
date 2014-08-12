@@ -1,3 +1,4 @@
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/libvsd)
 
 add_subdirectory(libvsd)
 

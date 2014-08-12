@@ -1,5 +1,5 @@
 project( VSD )
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 
 add_definitions(-DUNICODE -D_UNICODE  -D_CRT_RAND_S -D_WIN32_WINNT=0x0600)
 if(MSVC)
