@@ -32,33 +32,35 @@
 
 using namespace libvsd;
 
-void printHelp(){
+void printHelp()
+{
     std::wcout << L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]" << std::endl <<
-                  L"Options:" << std::endl <<
-                  L"--vsd-seperate-error \t\t\t Seperate stderr and stdout to identify sterr messages" <<
-                  L"--vsd-log logFile \t\t Write a log in colored html to logFile" << std::endl <<
-                  L"--vsd-logplain logFile \t\t Write a log to logFile" << std::endl <<
-                  L"--vsd-all\t\t\t Debug also all processes created by TARGET_APPLICATION" << std::endl <<
-                  L"--vsd-nc \t\t\t Monochrome output" << std::endl <<
-                  L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome" << std::endl <<
-                  L"--help \t\t\t\t print this help" << std::endl <<
-                  L"--version\t\t\t print version and copyright information" << std::endl;
+               L"Options:" << std::endl <<
+               L"--vsd-seperate-error \t\t\t Seperate stderr and stdout to identify sterr messages" <<
+               L"--vsd-log logFile \t\t Write a log in colored html to logFile" << std::endl <<
+               L"--vsd-logplain logFile \t\t Write a log to logFile" << std::endl <<
+               L"--vsd-all\t\t\t Debug also all processes created by TARGET_APPLICATION" << std::endl <<
+               L"--vsd-nc \t\t\t Monochrome output" << std::endl <<
+               L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome" << std::endl <<
+               L"--help \t\t\t\t print this help" << std::endl <<
+               L"--version\t\t\t print version and copyright information" << std::endl;
     exit(0);
 }
 
-void printVersion(){
+void printVersion()
+{
     std::wcout << L"VSD version 0.6.1" << std::endl <<
-                  std::endl <<
-                  L"Copyright (C) 2012-2013  Patrick von Reth <vonreth@kde.org>" << std::endl <<
-                  std::endl <<
-                  L"VSD is free software: you can redistribute it and/or modify" << std::endl <<
-                  L"it under the terms of the GNU Lesser General Public License as published by" << std::endl <<
-                  L"the Free Software Foundation, either version 3 of the License, or" << std::endl <<
-                  L"(at your option) any later version." << std::endl;
+               std::endl <<
+               L"Copyright (C) 2012-2013  Patrick von Reth <vonreth@kde.org>" << std::endl <<
+               std::endl <<
+               L"VSD is free software: you can redistribute it and/or modify" << std::endl <<
+               L"it under the terms of the GNU Lesser General Public License as published by" << std::endl <<
+               L"the Free Software Foundation, either version 3 of the License, or" << std::endl <<
+               L"(at your option) any later version." << std::endl;
     exit(0);
 }
 
-class VSDImp : public VSDClient{
+class VSDImp : public VSDClient {
 public:
     VSDImp(wchar_t *in[], int len)
     {
@@ -70,7 +72,7 @@ public:
             std::wstring arg(in[i]);
             if (arg == L"--vsd-seperate-error")
             {
-                 m_channels = VSDProcess::SeperateChannels;
+                m_channels = VSDProcess::SeperateChannels;
             }
             else if (arg == L"--vsd-log")
             {
@@ -93,13 +95,16 @@ public:
             {
                 i = initBenchmark(in, i, len);
             }
-            else  if (arg == L"--help")
+            else  if (i == 1)
             {
-                printHelp();
-            }
-            else  if (arg == L"--version")
-            {
-                printVersion();
+                if(arg == L"--help")
+                {
+                    printHelp();
+                }
+                else  if (arg == L"--version")
+                {
+                    printVersion();
+                }
             }
             else if (i > 1)
             {
@@ -123,7 +128,8 @@ public:
     {
 
         delete m_process;
-        if (m_log != INVALID_HANDLE_VALUE){
+        if (m_log != INVALID_HANDLE_VALUE)
+        {
             htmlFOOTER();
             CloseHandle(m_log);
         }
@@ -191,15 +197,15 @@ public:
             return;
         std::stringstream ss;
         ss << "<!DOCTYPE html>\n" <<
-              "<html>\n" <<
-              "<head>\n" <<
-              "<meta charset=\"UTF-8\" />\n" <<
-              "<title>VSD " <<
-              std::string(program.begin(), program.end()) << " " <<
-              std::string(arguments.begin(), arguments.end()) <<
-              "</title>\n" <<
-              "</head>\n" <<
-              "<body>";
+           "<html>\n" <<
+           "<head>\n" <<
+           "<meta charset=\"UTF-8\" />\n" <<
+           "<title>VSD " <<
+           std::string(program.begin(), program.end()) << " " <<
+           std::string(arguments.begin(), arguments.end()) <<
+           "</title>\n" <<
+           "</head>\n" <<
+           "<body>";
         printFilePlain(ss.str());
 
     }
@@ -339,7 +345,7 @@ private:
     bool m_run = true;
     VSDProcess::ProcessChannelMode m_channels = VSDProcess::MergedChannels;
 
-
+    
 };
 
 
@@ -359,7 +365,8 @@ int main()
 {
     int argc;
     wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if (argc < 2){
+    if (argc < 2)
+    {
         printHelp();
     }
 
