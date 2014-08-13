@@ -130,10 +130,9 @@ public:
     {
 
         delete m_process;
-        if (m_log != INVALID_HANDLE_VALUE)
+        if(m_log.is_open())
         {
             htmlFOOTER();
-            CloseHandle(m_log);
         }
         SetConsoleTextAttribute(m_hout, m_consoleSettings.wAttributes);
         CloseHandle(m_hout);
