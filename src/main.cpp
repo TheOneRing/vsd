@@ -29,6 +29,8 @@
 #include <signal.h>
 #include <mutex>
 #include <chrono>
+#include <regex>
+
 
 using namespace libvsd;
 
@@ -49,9 +51,9 @@ void printHelp()
 
 void printVersion()
 {
-    std::wcout << L"VSD version 0.6.1" << std::endl <<
+    std::wcout << L"VSD version 0.7.0" << std::endl <<
                std::endl <<
-               L"Copyright (C) 2012-2013  Patrick von Reth <vonreth@kde.org>" << std::endl <<
+               L"Copyright (C) 2012-2014  Patrick von Reth <vonreth@kde.org>" << std::endl <<
                std::endl <<
                L"VSD is free software: you can redistribute it and/or modify" << std::endl <<
                L"it under the terms of the GNU Lesser General Public License as published by" << std::endl <<
@@ -141,7 +143,8 @@ public:
     {
         if (pos + 1 < len)
         {
-            m_log = CreateFile(in[++pos], GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+            std::wstring name(in[++pos]);
+            m_log.open(std::string(name.begin(),name.end()).c_str(), std::ios::out | std::ios::binary);
         }
         else
         {
@@ -195,18 +198,15 @@ public:
     {
         if (!m_html)
             return;
-        std::stringstream ss;
-        ss << "<!DOCTYPE html>\n" <<
+        m_log << "<!DOCTYPE html>\n" <<
            "<html>\n" <<
            "<head>\n" <<
            "<meta charset=\"UTF-8\" />\n" <<
            "<title>VSD " <<
-           std::string(program.begin(), program.end()) << " " <<
-           std::string(arguments.begin(), arguments.end()) <<
+           program << " " << arguments <<
            "</title>\n" <<
            "</head>\n" <<
            "<body>";
-        printFilePlain(ss.str());
 
     }
 
@@ -214,49 +214,41 @@ public:
     {
         if (!m_html)
             return;
-        printFilePlain("</body>\n\n</html>\n");
+        m_log << "</body>\n\n</html>\n";
     }
 
-    inline void printFilePlain(const std::string &data)
-    {
-        DWORD dwRead;
-        WriteFile(m_log, data.c_str(), data.length() * sizeof(char), &dwRead, NULL);
-    }
 
     inline void printFile(const std::wstring &data, WORD color)
     {
         if (m_log == INVALID_HANDLE_VALUE)
             return;
-        std::stringstream ss;
-        DWORD dwRead;
         if (m_html && color != 0)
         {
-            ss << "<p style=\"color:";
+            m_log << "<p style=\"color:";
             switch (color)
             {
             case FOREGROUND_BLUE:
             case FOREGROUND_BLUE | FOREGROUND_INTENSITY:
-                ss << "blue";
+                m_log << "blue";
                 break;
             case FOREGROUND_GREEN:
             case FOREGROUND_GREEN | FOREGROUND_INTENSITY:
-                ss << "green";
+                m_log << "green";
                 break;
             case FOREGROUND_RED:
             case FOREGROUND_RED | FOREGROUND_INTENSITY:
-                ss << "red";
+                m_log << "red";
                 break;
             default:
-                ss << "black";
+                m_log << "black";
             }
-            ss << "\">";
-            printFilePlain(ss.str());
-            WriteFile(m_log, data.c_str(), data.size()* sizeof(wchar_t), &dwRead, NULL);
-            printFilePlain("</p>\n");
+            m_log << "\">";
+            static std::wregex regex(L"[\\r|\\r\\n]");
+            m_log << std::regex_replace(data, regex, L"</br>") << "</p>\n";
         }
         else
         {
-            WriteFile(m_log, data.c_str(), data.size()* sizeof(wchar_t), &dwRead, NULL);
+            m_log << data;
         }
     }
 
@@ -335,7 +327,7 @@ public:
 private:
 
     VSDProcess *m_process;
-    HANDLE m_log = INVALID_HANDLE_VALUE;
+    std::wofstream m_log;
     HANDLE m_hout = INVALID_HANDLE_VALUE;
     CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
     bool m_colored = true;
