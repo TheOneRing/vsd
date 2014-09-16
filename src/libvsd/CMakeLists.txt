@@ -12,4 +12,4 @@ install(TARGETS libvsd RUNTIME DESTINATION bin
                      LIBRARY DESTINATION lib
                      ARCHIVE DESTINATION lib)
                      
-install(FILES vsdprocess.h vsd_exports.h DESTINATION include/vsd)
+install(FILES vsdprocess.h ${CMAKE_CURRENT_BINARY_DIR}/vsd_exports.h DESTINATION include/vsd)
