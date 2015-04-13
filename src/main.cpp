@@ -219,8 +219,9 @@ public:
 
     inline void printFile(const std::wstring &data, WORD color)
     {
-        if (m_log == INVALID_HANDLE_VALUE)
-            return;
+		if (!m_log.is_open()) {
+			return;
+		}
         if (m_html && color != 0)
         {
             m_log << "<p style=\"color:";
