@@ -173,7 +173,7 @@ public:
 
     inline void run()
     {
-        std::chrono::system_clock::duration time(0);
+        std::chrono::high_resolution_clock::duration time(0);
         for (int i = 1; m_run && i <= m_iterations; ++i)
         {
             m_exitCode = m_process->run(m_channels);
@@ -265,7 +265,7 @@ public:
         printFile(data, color);
     }
 
-    inline std::wstring getTimestamp(const std::chrono::system_clock::duration &time)
+    inline std::wstring getTimestamp(const std::chrono::high_resolution_clock::duration &time)
     {
         std::wstringstream out;
         out << std::chrono::duration_cast<std::chrono::hours>(time).count() << ":"

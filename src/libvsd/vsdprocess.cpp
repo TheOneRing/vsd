@@ -360,7 +360,7 @@ public:
     bool m_debugSubProcess = false;
 
     unsigned long m_exitCode = STILL_ACTIVE;
-    std::chrono::system_clock::duration m_time;
+    std::chrono::high_resolution_clock::duration m_time;
 
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
@@ -422,7 +422,7 @@ int VSDProcess::exitCode() const
     return d->m_exitCode;
 }
 
-const std::chrono::system_clock::duration &VSDProcess::time() const
+const std::chrono::high_resolution_clock::duration &VSDProcess::time() const
 {
     return d->m_time;
 }

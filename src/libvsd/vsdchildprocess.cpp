@@ -53,7 +53,7 @@ VSDChildProcess::~VSDChildProcess()
     CloseHandle(m_handle);
 }
 
-const std::chrono::system_clock::duration VSDChildProcess::time() const
+const std::chrono::high_resolution_clock::duration VSDChildProcess::time() const
 {
     if (m_exitCode != STILL_ACTIVE)
     {

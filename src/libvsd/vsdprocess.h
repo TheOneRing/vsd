@@ -63,7 +63,7 @@ public:
     const std::wstring &program() const;
     const std::wstring &arguments() const;
     int exitCode() const;
-    const std::chrono::system_clock::duration &time() const;
+    const std::chrono::high_resolution_clock::duration &time() const;
 
 private:
     class PrivateVSDProcess;
