@@ -1,7 +1,7 @@
 /*
     VSD prints debugging messages of applications and their
     sub-processes to console and supports logging of their output.
-    Copyright (C) 2012-2013  Patrick von Reth <vonreth@kde.org>
+    Copyright (C) 2012-2016  Hannah von Reth <vonreth@kde.org>
 
 
     VSD is free software: you can redistribute it and/or modify
