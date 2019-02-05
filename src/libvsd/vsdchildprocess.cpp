@@ -36,9 +36,9 @@ VSDChildProcess::VSDChildProcess(VSDClient *client, const unsigned long id, cons
     m_client(client),
     m_id(id),
     m_handle(OpenProcess(PROCESS_ALL_ACCESS, FALSE, id)),
+    m_path(Utils::getFinalPathNameByHandle(fileHandle)),
     m_startTime(std::chrono::high_resolution_clock::now()),
-    m_exitCode(STILL_ACTIVE),
-    m_path(Utils::getFinalPathNameByHandle(fileHandle))
+    m_exitCode(STILL_ACTIVE)
 {
     const auto start = m_path.find_last_of(L'\\') + 1;
     m_name = m_path.substr(start, m_path.length() - start - 5);
@@ -58,13 +58,13 @@ const std::chrono::high_resolution_clock::duration VSDChildProcess::time() const
     return  std::chrono::high_resolution_clock::now() - m_startTime;
 }
 
-void VSDChildProcess::processStopped(const int exitCode)
+void VSDChildProcess::processStopped(const uint32_t exitCode)
 {
     m_duration = std::chrono::high_resolution_clock::now() - m_startTime;
     m_exitCode = exitCode;
 }
 
-void VSDChildProcess::processDied(const int exitCode, const int errorCode)
+void VSDChildProcess::processDied(const uint32_t exitCode, const int errorCode)
 {
 
     processStopped(exitCode);
@@ -76,13 +76,13 @@ void VSDChildProcess::processDied(const int exitCode, const int errorCode)
                                nullptr,
                                errorCode,
                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                               (LPWSTR)&error,
+                               reinterpret_cast<LPWSTR>(&error),
                                0, nullptr);
     m_error = std::wstring(error, len);
     LocalFree(error);
 }
 
-void VSDChildProcess::processDied(const int exitCode, std::wstring error)
+void VSDChildProcess::processDied(const uint32_t exitCode, std::wstring error)
 {
     processStopped(exitCode);
     m_error = error;

@@ -65,16 +65,16 @@ public:
         return m_id;
     }
 
-    inline int exitCode() const
+    inline uint32_t exitCode() const
     {
         return m_exitCode;
     }
 
-    void processStopped(const int exitCode);
+    void processStopped(const uint32_t exitCode);
 
-    void processDied(const int exitCode, const int error);
+    void processDied(const uint32_t exitCode, const int error);
 
-    void processDied(const int exitCode, std::wstring error);
+    void processDied(const uint32_t exitCode, std::wstring error);
 
     void stop();
 
@@ -89,7 +89,7 @@ private:
     std::chrono::high_resolution_clock::duration m_duration;
 
     std::map <void *, std::wstring> m_dllNames;
-    int m_exitCode;
+    uint32_t m_exitCode;
 
     friend class VSDProcess;
 
