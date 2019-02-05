@@ -76,7 +76,7 @@ public:
                 return;
             }
             // resize to the internal lenght
-            m_program.resize(m_program.find_first_of(L'\0') - 1);
+            m_program.resize(m_program.find_first_of(L'\0'));
         }
         m_program.shrink_to_fit();
     }
