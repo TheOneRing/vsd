@@ -35,6 +35,18 @@
 #include <time.h>
 #include <shlwapi.h>
 
+#include <functional>
+
+namespace {
+  // https://www.programering.com/a/MjMwMDMwATI.html
+  template <typename T>
+  std::function<T> getFunction(HMODULE module, const char *funcName)
+  {
+  FARPROC funAddress = GetProcAddress(module, funcName);
+  return std::function<T>(reinterpret_cast<T*>(funAddress));
+  }
+}
+
 
 using namespace libvsd;
 
@@ -305,12 +317,18 @@ public:
 
         DWORD status = DBG_CONTINUE;
 
+        const auto kernel = LoadLibrary(L"Kernel32.dll");
+        auto waitForDebug = getFunction<bool(LPDEBUG_EVENT, DWORD)>(kernel, "WaitForDebugEventEx");
+        if (!waitForDebug) {
+          waitForDebug = getFunction<bool(LPDEBUG_EVENT, DWORD)>(kernel, "WaitForDebugEvent");
+        }
+        FreeLibrary(kernel);
 
         do{
             status = DBG_CONTINUE;
             readOutput(m_stdout);
             readOutput(m_stderr);
-            if (WaitForDebugEventEx(&debug_event, 500)){
+            if (waitForDebug(&debug_event, 500)){
                 readOutput(m_stdout);
                 readOutput(m_stderr);
                 switch (debug_event.dwDebugEventCode){
