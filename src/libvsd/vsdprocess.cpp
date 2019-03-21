@@ -72,7 +72,7 @@ public:
             if (size != (m_program.size() + 1)) {
                 // we can't modify it inplace
                 const auto copy = m_program;
-                m_program.resize(size-1);
+                m_program.resize(size + 1);
                 GetFullPathName(copy.data(), size, m_program.data(), nullptr);
             }
         }
@@ -87,9 +87,10 @@ public:
                 m_client->writeErr(ws.str());
                 return;
             }
-            // resize to the internal lenght
-            m_program.resize(wcslen(m_program.data()));
         }
+        
+        // resize to the internal lenght
+        m_program.resize(wcslen(m_program.data()));
         m_program.shrink_to_fit();
     }
 
