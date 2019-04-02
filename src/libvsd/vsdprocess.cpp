@@ -37,17 +37,6 @@
 
 #include <functional>
 
-namespace {
-  // https://www.programering.com/a/MjMwMDMwATI.html
-  template <typename T>
-  std::function<T> getFunction(HMODULE module, const char *funcName)
-  {
-  FARPROC funAddress = GetProcAddress(module, funcName);
-  return std::function<T>(reinterpret_cast<T*>(funAddress));
-  }
-}
-
-
 using namespace libvsd;
 
 static HANDLE SHUTDOWN_EVENT = CreateEvent(nullptr, false, false, L"Shutdown Event");
@@ -318,10 +307,13 @@ public:
 
         DWORD status = DBG_CONTINUE;
 
+
+        typedef BOOL (WINAPI *debug_wait)(LPDEBUG_EVENT, DWORD);
+
         const auto kernel = LoadLibrary(L"Kernel32.dll");
-        auto waitForDebug = getFunction<bool(LPDEBUG_EVENT, DWORD)>(kernel, "WaitForDebugEventEx");
+        auto waitForDebug = (debug_wait)GetProcAddress(kernel, "WaitForDebugEventEx");
         if (!waitForDebug) {
-          waitForDebug = getFunction<bool(LPDEBUG_EVENT, DWORD)>(kernel, "WaitForDebugEvent");
+          waitForDebug = (debug_wait)GetProcAddress(kernel, "WaitForDebugEvent");
         }
         FreeLibrary(kernel);
 
@@ -329,7 +321,7 @@ public:
             status = DBG_CONTINUE;
             readOutput(m_stdout);
             readOutput(m_stderr);
-            if (waitForDebug(&debug_event, 500)){
+            if ((*waitForDebug)(&debug_event, 500)){
                 readOutput(m_stdout);
                 readOutput(m_stderr);
                 switch (debug_event.dwDebugEventCode){
