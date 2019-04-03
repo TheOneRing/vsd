@@ -68,18 +68,7 @@ void VSDChildProcess::processDied(const uint32_t exitCode, const int errorCode)
 {
 
     processStopped(exitCode);
-
-    wchar_t *error = nullptr;
-    size_t len = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                               FORMAT_MESSAGE_FROM_SYSTEM |
-                               FORMAT_MESSAGE_IGNORE_INSERTS,
-                               nullptr,
-                               errorCode,
-                               MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                               reinterpret_cast<LPWSTR>(&error),
-                               0, nullptr);
-    m_error = std::wstring(error, len);
-    LocalFree(error);
+    m_error = Utils::formatError(errorCode);
 }
 
 void VSDChildProcess::processDied(const uint32_t exitCode, std::wstring error)

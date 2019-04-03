@@ -19,10 +19,13 @@
     */
 
 
+
 #include "vsdprocess.h"
 #include "vsdchildprocess.h"
 #include "vsdpipe.h"
 #include "utils.h"
+
+#include "ceee/gflag_utils.h"
 
 #include <windows.h>
 #include <winbase.h>
@@ -284,10 +287,11 @@ public:
 
         std::wstringstream tmp;
         tmp << "\"" << m_program << "\" " << m_arguments;
-        if (!CreateProcess(m_program.data(), tmp.str().data(), nullptr, nullptr, TRUE, debugConfig, nullptr, nullptr, &m_si, &m_pi))
+        HRESULT hr = testing::CreateProcessWithGFlags(m_program.data(), tmp.str().data(), nullptr, nullptr, TRUE, debugConfig, nullptr, nullptr, &m_si, &m_pi, m_gFlags);
+        if (!SUCCEEDED(hr))
         {
             std::wstringstream ws;
-            ws << "Failed to start " << m_program << " " << m_arguments << " " << GetLastError() << std::endl;
+            ws << "Failed to start " << m_program << " " << m_arguments << " " << std::hex << hr << std::dec << Utils::formatError(hr) << std::endl;
             m_client->writeErr(ws.str());
             return -1;
         }
@@ -395,6 +399,7 @@ public:
     std::wstring m_program;
     std::wstring m_arguments;
     bool m_debugSubProcess = false;
+    unsigned long m_gFlags = {};
 
     unsigned long m_exitCode = STILL_ACTIVE;
     std::chrono::high_resolution_clock::duration m_time;
@@ -442,6 +447,15 @@ void VSDProcess::stop()
 void VSDProcess::debugSubProcess(bool b)
 {
     d->m_debugSubProcess = b;
+}
+
+void VSDProcess::debugDllLoading(bool b)
+{
+    if (b) {
+        d->m_gFlags |= FLG_SHOW_LDR_SNAPS;
+    } else {
+        d->m_gFlags &= ~FLG_SHOW_LDR_SNAPS;
+    }
 }
 
 const std::wstring &VSDProcess::program() const

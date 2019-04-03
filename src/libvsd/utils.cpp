@@ -49,4 +49,20 @@ std::wstring multiByteToWideChar(const std::string &data)
         return out;
 }
 
+std::wstring formatError(unsigned long errorCode)
+{
+    wchar_t *error = nullptr;
+    size_t len = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                               FORMAT_MESSAGE_FROM_SYSTEM |
+                               FORMAT_MESSAGE_IGNORE_INSERTS,
+                               nullptr,
+                               errorCode,
+                               MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                               reinterpret_cast<LPWSTR>(&error),
+                               0, nullptr);
+    const auto out = std::wstring(error, len);
+    LocalFree(error);
+    return out;
+}
+
 }

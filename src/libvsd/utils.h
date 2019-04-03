@@ -30,6 +30,8 @@ namespace Utils
 std::wstring getFinalPathNameByHandle(const HANDLE handle);
 
 std::wstring multiByteToWideChar(const std::string &data);
+
+std::wstring formatError(unsigned long errorCode);
 };
 
 #endif // UTILS_H

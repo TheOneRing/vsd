@@ -1,6 +1,6 @@
 add_subdirectory(libvsd)
 
-add_executable(vsd main.cpp )
+add_executable(vsd main.cpp)
 target_link_libraries(vsd libvsd)
 
 install(TARGETS vsd RUNTIME DESTINATION bin

@@ -36,6 +36,7 @@
 
 #include <iostream>
 #include <io.h>
+#include <ios>
 #include <fcntl.h>
 #include <codecvt>
 
@@ -49,6 +50,7 @@ void printHelp()
                L"--vsd-log logFile \t\t write the logFile in colored html" << std::endl <<
                L"--vsd-logplain logFile \t\t write a log to logFile" << std::endl <<
                L"--vsd-all\t\t\t debug also all processes created by TARGET_APPLICATION" << std::endl <<
+               L"--vsd-debug-dll\t\t\t Debugg dll loading" << std::endl <<
                L"--vsd-nc \t\t\t monochrome output" << std::endl <<
                L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome" << std::endl <<
                L"--help \t\t\t\t print this help" << std::endl <<
@@ -75,6 +77,8 @@ public:
     {
         std::wstring program(in[1]);
         std::wstringstream arguments;
+
+        bool debug_dll = false;
         bool withSubProcess = false;
         for (int i = 1; i < len; ++i)
         {
@@ -82,6 +86,10 @@ public:
             if (arg == L"--vsd-seperate-error")
             {
                 m_channels = VSDProcess::SeperateChannels;
+            }
+            else if (arg == L"--vsd-debug-dll")
+            {
+                debug_dll = true;
             }
             else if (arg == L"--vsd-log")
             {
@@ -130,16 +138,20 @@ public:
         print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
         m_process = new VSDProcess(program, arguments.str(), this);
+        m_process->debugDllLoading(debug_dll);
         m_process->debugSubProcess(withSubProcess);
     }
 
     ~VSDImp()
     {
+        std::wcout.flush();
+        std::wcerr.flush();
 
         delete m_process;
         if(m_log.is_open())
         {
             htmlFOOTER();
+            m_log.flush();
         }
         SetConsoleTextAttribute(m_hout, m_consoleSettings.wAttributes);
         CloseHandle(m_hout);
@@ -345,7 +357,7 @@ public:
                << process->error();
         }
         ws << " With exit Code: "
-           << process->exitCode()
+           << std::hex << process->exitCode() << std::dec
            << " After: "
            << getTimestamp(process->time())
            << std::endl;
@@ -370,9 +382,7 @@ private:
     bool m_noOutput = false;
     int m_iterations = 1;
     bool m_run = true;
-    VSDProcess::ProcessChannelMode m_channels = VSDProcess::MergedChannels;
-
-    
+    VSDProcess::ProcessChannelMode m_channels = VSDProcess::MergedChannels;    
 };
 
 

@@ -61,6 +61,7 @@ public:
     int run(VSDProcess::ProcessChannelMode channelMode =  VSDProcess::MergedChannels);
     void stop();
     void debugSubProcess(bool b);
+    void debugDllLoading(bool b);
     const std::wstring &program() const;
     const std::wstring &arguments() const;
     int exitCode() const;
