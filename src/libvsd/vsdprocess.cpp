@@ -247,6 +247,10 @@ public:
 
     int run(VSDProcess::ProcessChannelMode channelMode)
     {
+        if (m_program.empty())
+        {
+            return -1;
+        }
 
         SECURITY_ATTRIBUTES sa = {};
         sa.nLength = sizeof(sa);
@@ -276,16 +280,7 @@ public:
             m_si.hStdError = m_stderr->hWrite;
         }
 
-        unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
-
-        if (m_program.size() == 0)
-        {
-            return -1;
-        }
-        if (m_debugSubProcess)
-        {
-            debugConfig = DEBUG_PROCESS;
-        }
+        const unsigned long debugConfig = m_debugSubProcess ? DEBUG_ONLY_THIS_PROCESS : DEBUG_PROCESS;
 
         std::wstringstream tmp;
         tmp << "\"" << m_program << "\" " << m_arguments;
