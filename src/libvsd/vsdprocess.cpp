@@ -248,13 +248,10 @@ public:
     int run(VSDProcess::ProcessChannelMode channelMode)
     {
 
-        SECURITY_ATTRIBUTES sa;
-        ZeroMemory(&sa, sizeof(SECURITY_ATTRIBUTES));
+        SECURITY_ATTRIBUTES sa = {};
         sa.nLength = sizeof(sa);
         sa.bInheritHandle = TRUE;
 
-
-        ZeroMemory(&m_si, sizeof(m_si));
         m_si.cb = sizeof(m_si);
         m_si.dwFlags |= STARTF_USESTDHANDLES;
 
@@ -279,8 +276,6 @@ public:
             m_si.hStdError = m_stderr->hWrite;
         }
 
-        ZeroMemory(&m_pi, sizeof(m_pi));
-
         unsigned long debugConfig = DEBUG_ONLY_THIS_PROCESS;
 
         if (m_program.size() == 0)
@@ -302,9 +297,7 @@ public:
             return -1;
         }
 
-        DEBUG_EVENT debug_event;
-        ZeroMemory(&debug_event, sizeof(DEBUG_EVENT));
-
+        DEBUG_EVENT debug_event = {};
         DWORD status = DBG_CONTINUE;
 
 
@@ -411,8 +404,8 @@ public:
     unsigned long m_exitCode = STILL_ACTIVE;
     std::chrono::high_resolution_clock::duration m_time;
 
-    STARTUPINFO m_si;
-    PROCESS_INFORMATION m_pi;
+    STARTUPINFO m_si = {};
+    PROCESS_INFORMATION m_pi = {};
     VSDPipe *m_stdout = nullptr;
     VSDPipe *m_stderr = nullptr;
 

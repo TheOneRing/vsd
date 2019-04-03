@@ -28,20 +28,11 @@
 class VSDPipe
 {
 public:
-    VSDPipe(SECURITY_ATTRIBUTES *sa) :
-        hWrite(INVALID_HANDLE_VALUE),
-        hRead(INVALID_HANDLE_VALUE)
+    VSDPipe(SECURITY_ATTRIBUTES *sa)
     {
-        ZeroMemory(&overlapped, sizeof(overlapped));
-
-        size_t maxPipeLen = MAX_PATH;
-        wchar_t *pipeName = new wchar_t[maxPipeLen];
-        unsigned int randomValue;
-        if (rand_s(&randomValue) != 0)
-        {
-            randomValue = rand();
-        }
-        swprintf_s(pipeName, maxPipeLen, L"\\\\.\\pipe\\vsd-%X", randomValue);
+        static unsigned int uid = 0;
+        wchar_t pipeName[MAX_PATH];
+        swprintf_s(pipeName, MAX_PATH, L"\\\\.\\pipe\\vsd-%X-%X", GetCurrentProcessId(), uid++);
 
         DWORD dwPipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
         const DWORD dwPipeBufferSize = 1024 * 1024;
@@ -99,9 +90,9 @@ public:
 
 
 
-    HANDLE hWrite;
-    HANDLE hRead;
-    OVERLAPPED overlapped;
+    HANDLE hWrite = INVALID_HANDLE_VALUE;
+    HANDLE hRead = INVALID_HANDLE_VALUE;
+    OVERLAPPED overlapped =  {};
 };
 
 #endif // VSDPIPE_H
