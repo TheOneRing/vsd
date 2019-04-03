@@ -111,18 +111,6 @@ HRESULT CreateProcessWithGFlags(LPCWSTR application_name,
                                 LPPROCESS_INFORMATION proc_info,
                                 DWORD gflags);
 
-// Relaunches the current executable with the same command
-// line, environment, current directory, as this process has,
-// but with the supplied gflags in addition to the current process'
-// gflags.
-// @param wanted_gflags the set of global flags requested.
-// @return S_FALSE if the current process is already running with
-//    all of the supplied flags, or an appropriate error otherwise.
-// @note On success, this function will not return, but will
-//    call ExitProcess to propagate the exit code of the
-//    relaunched child process.
-HRESULT RelaunchWithGFlags(DWORD wanted_gflags);
-
 }  // namespace testing
 
 #endif  // CEEE_TESTING_UTILS_GFLAG_UTILS_H_
