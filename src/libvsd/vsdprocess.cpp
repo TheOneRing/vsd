@@ -172,7 +172,12 @@ public:
     inline void dllUnloadEvent(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children.at(debugEvent.dwProcessId);
         const UNLOAD_DLL_DEBUG_INFO  &DebugDll = debugEvent.u.UnloadDll;
-        m_client->writeDllLoad(child, child->m_dllNames.at(DebugDll.lpBaseOfDll), false);
+        std::wstring out = L"Unknown";
+        const auto dllName = child->m_dllNames.find(DebugDll.lpBaseOfDll);
+        if (dllName != child->m_dllNames.cend()) {
+            out = dllName->second;
+        }
+        m_client->writeDllLoad(child, out, false);
     }
 
 #define exeptionString(x) case x : out << #x;break
