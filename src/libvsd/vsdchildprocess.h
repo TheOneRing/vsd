@@ -79,6 +79,8 @@ public:
     void stop();
 
 private:
+#pragma warning(disable: 4251)
+
     VSDClient  *m_client;
     unsigned long m_id;
     HANDLE m_handle;
@@ -92,8 +94,6 @@ private:
     uint32_t m_exitCode;
 
     friend class VSDProcess;
-
-
 };
 
 }

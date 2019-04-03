@@ -22,6 +22,8 @@
 #include "libvsd/vsdchildprocess.h"
 
 #include <windows.h>
+#include <shellapi.h>
+
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -149,7 +151,9 @@ public:
         {
             std::wstring name(in[++pos]);
             m_log.open(std::string(name.begin(),name.end()).data(), std::ios::out | std::ios::binary);
+#pragma warning(disable: 4996)
             const std::locale utf8_locale = std::locale(std::locale(), new std::codecvt_utf8<wchar_t>());
+#pragma warning(default: 4996)
             m_log.imbue(utf8_locale);
         }
         else
