@@ -40,6 +40,20 @@
 #include <fcntl.h>
 #include <codecvt>
 
+namespace {
+inline bool iseol(wchar_t c)
+{
+    return c == L'\n' || c == L'\r';
+}
+
+inline std::wstring rtrim(std::wstring s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
+        return !iseol(ch);
+    }).base(), s.end());
+    return s;
+}
+}
+
 using namespace libvsd;
 
 void printHelp()
@@ -327,7 +341,7 @@ public:
     inline void writeDebug(const VSDChildProcess *process, const std::wstring &data)
     {
         std::wstringstream ws;
-        ws << process->name() << L"(" << process->id() << L"): " << data;
+        ws << process->name() << L"(" << process->id() << L"): " << rtrim(data) << std::endl;
         print(ws.str(), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
     }
 

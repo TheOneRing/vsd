@@ -148,23 +148,21 @@ public:
     inline void dllLoadEvent(DEBUG_EVENT &debugEvent){
         VSDChildProcess *child = m_children.at(debugEvent.dwProcessId);
         const LOAD_DLL_DEBUG_INFO  &DebugDll = debugEvent.u.LoadDll;
-        if (!DebugDll.hFile || DebugDll.hFile == INVALID_HANDLE_VALUE)
-            return;
+        std::wstring out = L"Unknown";
+        if (DebugDll.hFile && DebugDll.hFile != INVALID_HANDLE_VALUE) {
+            const auto it = child->m_dllNames.find(DebugDll.lpBaseOfDll);
+            if (it == child->m_dllNames.cend())
+            {
+                out = Utils::getFinalPathNameByHandle(DebugDll.hFile);
+                child->m_dllNames.emplace(DebugDll.lpBaseOfDll, out);
+            }
+            else
+            {
+                out = it->second;
+            }
 
-        std::wstring out;
-
-        const auto it = child->m_dllNames.find(DebugDll.lpBaseOfDll);
-        if (it == child->m_dllNames.cend())
-        {
-            out = Utils::getFinalPathNameByHandle(DebugDll.hFile);
-            child->m_dllNames.emplace(DebugDll.lpBaseOfDll, out);
+            CloseHandle(DebugDll.hFile);
         }
-        else
-        {
-            out = it->second;
-        }
-
-        CloseHandle(DebugDll.hFile);
         m_client->writeDllLoad(child, out, true);
     }
 

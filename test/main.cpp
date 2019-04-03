@@ -13,6 +13,9 @@ int main() {
     std::wstring test(L"èéøÞǽлљΣæča\n");
 
     OutputDebugStringW(test.data());
+    OutputDebugStringW(L"wchar debug\n");
+    OutputDebugStringA("char debug\n");
+
     std::wcout << L"hello" << std::endl;
     std::wcout << test << std::endl;
     std::wcerr << test << std::endl;
