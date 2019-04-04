@@ -22,11 +22,20 @@
 #define UTILS_H
 
 #include <string>
+#include <algorithm>
 
 typedef void *HANDLE;
 
 namespace Utils
 {
+inline void trimNull(std::wstring &s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
+        return ch != 0;
+    }).base(), s.end());
+    s.shrink_to_fit();
+}
+
 std::wstring getFinalPathNameByHandle(const HANDLE handle);
 
 std::wstring multiByteToWideChar(const std::string &data);

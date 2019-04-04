@@ -80,10 +80,7 @@ public:
                 return;
             }
         }
-        
-        // resize to the internal lenght
-        m_program.resize(wcslen(m_program.data()));
-        m_program.shrink_to_fit();
+        Utils::trimNull(m_program);
     }
 
     ~PrivateVSDProcess()

@@ -36,6 +36,7 @@ std::wstring getFinalPathNameByHandle(const HANDLE handle)
         GetFinalPathNameByHandleW(handle, out.data(), size, FILE_NAME_NORMALIZED);
         /* remove \\?\ */
         out.erase(0, 4);
+        trimNull(out);
         return out;
     }
     return {};
@@ -43,9 +44,9 @@ std::wstring getFinalPathNameByHandle(const HANDLE handle)
 
 std::wstring multiByteToWideChar(const std::string &data)
 {
-        size_t outSize = MultiByteToWideChar(CP_UTF8, MB_USEGLYPHCHARS, data.data(), data.size(), nullptr, 0);
+        const size_t outSize = MultiByteToWideChar(CP_UTF8, MB_USEGLYPHCHARS, data.data(), static_cast<int>(data.size()), nullptr, 0);
         auto out = std::wstring(outSize, 0);
-        MultiByteToWideChar(CP_UTF8, MB_USEGLYPHCHARS, data.data(), data.size(), out.data(), outSize);
+        MultiByteToWideChar(CP_UTF8, MB_USEGLYPHCHARS, data.data(), static_cast<int>(data.size()), out.data(), static_cast<int>(outSize));
         return out;
 }
 
