@@ -33,13 +33,16 @@ std::wstring getFinalPathNameByHandle(const HANDLE handle)
     DWORD size = GetFinalPathNameByHandleW(handle, nullptr, 0, FILE_NAME_NORMALIZED);
     if(size) {
         out.resize(size);
-        GetFinalPathNameByHandleW(handle, out.data(), size, FILE_NAME_NORMALIZED);
+        if (!GetFinalPathNameByHandleW(handle, out.data(), size, FILE_NAME_NORMALIZED))
+        {
+            return L"getFinalPathNameByHandle Failed! " + formatError(GetLastError());
+        }
         /* remove \\?\ */
         out.erase(0, 4);
         trimNull(out);
         return out;
     }
-    return {};
+    return L"getFinalPathNameByHandle Failed! " + formatError(GetLastError());
 }
 
 std::wstring multiByteToWideChar(const std::string &data)
