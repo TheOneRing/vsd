@@ -41,7 +41,7 @@ VSDChildProcess::VSDChildProcess(VSDClient *client, const unsigned long id, cons
     m_exitCode(STILL_ACTIVE)
 {
     const auto start = m_path.find_last_of(L'\\') + 1;
-    m_name = m_path.substr(start, m_path.length() - start - 5);
+    m_name = m_path.substr(start, m_path.length() - start - 4);
 }
 
 VSDChildProcess::~VSDChildProcess()
