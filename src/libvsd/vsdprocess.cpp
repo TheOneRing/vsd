@@ -283,7 +283,7 @@ public:
             m_si.hStdError = m_stderr->hWrite;
         }
 
-        const unsigned long debugConfig = m_debugSubProcess ? DEBUG_ONLY_THIS_PROCESS : DEBUG_PROCESS;
+        const unsigned long debugConfig = m_debugSubProcess ? DEBUG_PROCESS : DEBUG_ONLY_THIS_PROCESS;
 
         std::wstringstream tmp;
         tmp << "\"" << m_program << "\" " << m_arguments;
