@@ -20,10 +20,12 @@
 
 #include "utils.h"
 
-#include <string>
-#include <windows.h>
+#include <comdef.h>
 #include <fileapi.h>
 #include <iostream>
+#include <string>
+#include <windows.h>
+#include <sstream>
 
 namespace Utils {
 
@@ -47,26 +49,17 @@ std::wstring getFinalPathNameByHandle(const HANDLE handle)
 
 std::wstring multiByteToWideChar(const std::string &data)
 {
-        const size_t outSize = MultiByteToWideChar(CP_UTF8, MB_USEGLYPHCHARS, data.data(), static_cast<int>(data.size()), nullptr, 0);
-        auto out = std::wstring(outSize, 0);
-        MultiByteToWideChar(CP_UTF8, MB_USEGLYPHCHARS, data.data(), static_cast<int>(data.size()), out.data(), static_cast<int>(outSize));
-        return out;
+    const size_t outSize = MultiByteToWideChar(CP_UTF8, MB_USEGLYPHCHARS, data.data(), static_cast<int>(data.size()), nullptr, 0);
+    auto out = std::wstring(outSize, 0);
+    MultiByteToWideChar(CP_UTF8, MB_USEGLYPHCHARS, data.data(), static_cast<int>(data.size()), out.data(), static_cast<int>(outSize));
+    return out;
 }
 
 std::wstring formatError(unsigned long errorCode)
 {
-    wchar_t *error = nullptr;
-    size_t len = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                               FORMAT_MESSAGE_FROM_SYSTEM |
-                               FORMAT_MESSAGE_IGNORE_INSERTS,
-                               nullptr,
-                               errorCode,
-                               MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                               reinterpret_cast<LPWSTR>(&error),
-                               0, nullptr);
-    const auto out = std::wstring(error, len);
-    LocalFree(error);
-    return out;
+    std::wstringstream out;
+    out << L"WindowsError: " << errorCode << " " << _com_error(errorCode).ErrorMessage();
+    return out.str();
 }
 
 }
