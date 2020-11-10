@@ -275,7 +275,7 @@ public:
         m_si.hStdOutput = m_stdout->hWrite;
         m_si.hStdError = m_stdout->hWrite;
 
-        if(channelMode != VSDProcess::MergedChannels)
+        if(channelMode != VSDProcess::ProcessChannelMode::MergedChannels)
         {
             m_stderr = new VSDPipe(&sa);
             if (!m_stderr->isValid())

@@ -21,6 +21,8 @@
 #include "libvsd/vsdprocess.h"
 #include "libvsd/vsdchildprocess.h"
 
+#include "3dparty/nlohmann/json.hpp"
+
 #include <windows.h>
 #include <shellapi.h>
 
@@ -33,6 +35,7 @@
 #include <chrono>
 #include <regex>
 #include <clocale>
+#include <filesystem>
 
 #include <iostream>
 #include <io.h>
@@ -92,15 +95,28 @@ public:
     {
         std::wstring program(in[1]);
         std::wstringstream arguments;
+        nlohmann::json config = nlohmann::json::parse("{}");
 
-        bool debug_dll = false;
-        bool withSubProcess = false;
+        const std::filesystem::path confFile = "./vsd.conf";
+        if (std::filesystem::exists(confFile))
+        {
+            std::ifstream stream(confFile);
+            stream >> config;
+        }
+        bool debug_dll = config.value("debugDllLoading", false);
+        m_logDll = config.value("logDllLoading", false);
+        bool withSubProcess = config.value("attachSubprocess", false);
+        
+        m_html = config.value("logHtml", true);
+        m_channels = config.value("mergeChannels", true) ? VSDProcess::ProcessChannelMode::MergedChannels : VSDProcess::ProcessChannelMode::SeperateChannels;
+        
+
         for (int i = 1; i < len; ++i)
         {
             std::wstring arg(in[i]);
             if (arg == L"--vsd-seperate-error")
             {
-                m_channels = VSDProcess::SeperateChannels;
+                m_channels = VSDProcess::ProcessChannelMode::SeperateChannels;
             }
             else if (arg == L"--vsd-debug-dll")
             {
@@ -402,7 +418,7 @@ private:
     int m_iterations = 1;
     bool m_run = true;
     bool m_logDll = false;
-    VSDProcess::ProcessChannelMode m_channels = VSDProcess::MergedChannels;    
+    VSDProcess::ProcessChannelMode m_channels = VSDProcess::ProcessChannelMode::MergedChannels;
 };
 
 

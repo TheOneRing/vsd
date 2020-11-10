@@ -48,7 +48,7 @@ public:
 class LIBVSD_EXPORT VSDProcess
 {
 public:
-    enum ProcessChannelMode
+    enum class ProcessChannelMode
     {
         SeperateChannels,
         MergedChannels
@@ -58,7 +58,7 @@ public:
     VSDProcess(const std::wstring &program, const std::wstring &arguments, VSDClient *client);
     virtual ~VSDProcess();
 
-    int run(VSDProcess::ProcessChannelMode channelMode =  VSDProcess::MergedChannels);
+    int run(VSDProcess::ProcessChannelMode channelMode =  VSDProcess::ProcessChannelMode::MergedChannels);
     void stop();
     void debugSubProcess(bool b);
     void debugDllLoading(bool b);
