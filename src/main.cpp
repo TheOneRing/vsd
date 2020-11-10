@@ -49,19 +49,22 @@ inline bool iseol(wchar_t c)
     return c == L'\n' || c == L'\r';
 }
 
-inline std::wstring rtrim(std::wstring s) {
+inline std::wstring rtrim(std::wstring s)
+{
     s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
         return !iseol(ch);
-    }).base(), s.end());
+    }).base(),
+        s.end());
     return s;
 }
 
-std::filesystem::path configPath() {
+std::filesystem::path configPath()
+{
     std::wstring buf;
     size_t size;
     do {
         buf.resize(buf.size() + 1024);
-        size = GetModuleFileNameW(nullptr, const_cast<wchar_t*>(buf.data()),
+        size = GetModuleFileNameW(nullptr, const_cast<wchar_t *>(buf.data()),
             static_cast<DWORD>(buf.size()));
     } while (GetLastError() == ERROR_INSUFFICIENT_BUFFER);
     buf.resize(size);
@@ -74,35 +77,36 @@ using namespace libvsd;
 
 void printHelp()
 {
-    std::wcout << L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]" << std::endl <<
-               L"Options:" << std::endl <<
-               L"--vsd-seperate-error \t\t seperate stderr and stdout to identify sterr messages" << std::endl <<
-               L"--vsd-log logFile \t\t write the logFile in colored html" << std::endl <<
-               L"--vsd-logplain logFile \t\t write a log to logFile" << std::endl <<
-               L"--vsd-all\t\t\t debug also all processes created by TARGET_APPLICATION" << std::endl <<
-               L"--vsd-debug-dll\t\t\t Debugg dll loading" << std::endl <<
-               L"--vsd-log-dll\t\t\t Log dll loading" << std::endl <<
-               L"--vsd-nc \t\t\t monochrome output" << std::endl <<
-               L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome" << std::endl <<
-               L"--help \t\t\t\t print this help" << std::endl <<
-               L"--version\t\t\t print version and copyright information" << std::endl;
+    std::wcout << L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]" << std::endl
+               << L"Options:" << std::endl
+               << L"--vsd-seperate-error \t\t seperate stderr and stdout to identify sterr messages" << std::endl
+               << L"--vsd-log logFile \t\t write the logFile in colored html" << std::endl
+               << L"--vsd-logplain logFile \t\t write a log to logFile" << std::endl
+               << L"--vsd-all\t\t\t debug also all processes created by TARGET_APPLICATION" << std::endl
+               << L"--vsd-debug-dll\t\t\t Debugg dll loading" << std::endl
+               << L"--vsd-log-dll\t\t\t Log dll loading" << std::endl
+               << L"--vsd-nc \t\t\t monochrome output" << std::endl
+               << L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome" << std::endl
+               << L"--help \t\t\t\t print this help" << std::endl
+               << L"--version\t\t\t print version and copyright information" << std::endl;
     exit(0);
 }
 
 void printVersion()
 {
-    std::wcout << L"VSD version 0.8.0" << std::endl <<
-               std::endl <<
-               L"Copyright (C) 2012-2020  Hannah von Reth <vonreth@kde.org>" << std::endl <<
-               std::endl <<
-               L"VSD is free software: you can redistribute it and/or modify" << std::endl <<
-               L"it under the terms of the GNU Lesser General Public License as published by" << std::endl <<
-               L"the Free Software Foundation, either version 3 of the License, or" << std::endl <<
-               L"(at your option) any later version." << std::endl;
+    std::wcout << L"VSD version 0.8.0" << std::endl
+               << std::endl
+               << L"Copyright (C) 2012-2020  Hannah von Reth <vonreth@kde.org>" << std::endl
+               << std::endl
+               << L"VSD is free software: you can redistribute it and/or modify" << std::endl
+               << L"it under the terms of the GNU Lesser General Public License as published by" << std::endl
+               << L"the Free Software Foundation, either version 3 of the License, or" << std::endl
+               << L"(at your option) any later version." << std::endl;
     exit(0);
 }
 
-class VSDImp : public VSDClient {
+class VSDImp : public VSDClient
+{
 public:
     VSDImp(wchar_t *in[], int len)
     {
@@ -111,66 +115,44 @@ public:
         nlohmann::json config = nlohmann::json::parse("{}");
 
         const std::filesystem::path confFile = configPath();
-        if (std::filesystem::exists(confFile))
-        {
+        if (std::filesystem::exists(confFile)) {
             std::ifstream stream(confFile);
             stream >> config;
         }
         bool debug_dll = config.value("debugDllLoading", false);
         m_logDll = config.value("logDllLoading", false);
         bool withSubProcess = config.value("attachSubprocess", false);
-        
+
         m_html = config.value("logHtml", true);
         m_channels = config.value("mergeChannels", true) ? VSDProcess::ProcessChannelMode::MergedChannels : VSDProcess::ProcessChannelMode::SeperateChannels;
-        
 
-        for (int i = 1; i < len; ++i)
-        {
+
+        for (int i = 1; i < len; ++i) {
             std::wstring arg(in[i]);
-            if (arg == L"--vsd-seperate-error")
-            {
+            if (arg == L"--vsd-seperate-error") {
                 m_channels = VSDProcess::ProcessChannelMode::SeperateChannels;
-            }
-            else if (arg == L"--vsd-debug-dll")
-            {
+            } else if (arg == L"--vsd-debug-dll") {
                 debug_dll = true;
             } else if (arg == L"--vsd-log-dll") {
                 m_logDll = true;
-            }
-            else if (arg == L"--vsd-log")
-            {
+            } else if (arg == L"--vsd-log") {
                 i = initLog(in, i, len);
-            }
-            else if (arg == L"--vsd-logplain")
-            {
+            } else if (arg == L"--vsd-logplain") {
                 m_html = false;
                 i = initLog(in, i, len);
-            }
-            else  if (arg == L"--vsd-all")
-            {
+            } else if (arg == L"--vsd-all") {
                 withSubProcess = true;
-            }
-            else  if (arg == L"--vsd-nc")
-            {
+            } else if (arg == L"--vsd-nc") {
                 m_colored = false;
-            }
-            else if (arg == L"--vsd-benchmark")
-            {
+            } else if (arg == L"--vsd-benchmark") {
                 i = initBenchmark(in, i, len);
-            }
-            else  if (i == 1)
-            {
-                if(arg == L"--help")
-                {
+            } else if (i == 1) {
+                if (arg == L"--help") {
                     printHelp();
-                }
-                else  if (arg == L"--version")
-                {
+                } else if (arg == L"--version") {
                     printVersion();
                 }
-            }
-            else if (i > 1)
-            {
+            } else if (i > 1) {
                 arguments << "\"" << arg << "\" ";
             }
         }
@@ -194,8 +176,7 @@ public:
         std::wcerr.flush();
 
         delete m_process;
-        if(m_log.is_open())
-        {
+        if (m_log.is_open()) {
             htmlFOOTER();
             m_log.flush();
         }
@@ -205,17 +186,14 @@ public:
 
     inline int initLog(wchar_t *in[], int pos, int len)
     {
-        if (pos + 1 < len)
-        {
+        if (pos + 1 < len) {
             std::wstring name(in[++pos]);
-            m_log.open(std::string(name.begin(),name.end()).data(), std::ios::out | std::ios::binary);
-#pragma warning(disable: 4996)
+            m_log.open(std::string(name.begin(), name.end()).data(), std::ios::out | std::ios::binary);
+#pragma warning(disable : 4996)
             const std::locale utf8_locale = std::locale(std::locale(), new std::codecvt_utf8<wchar_t>());
-#pragma warning(default: 4996)
+#pragma warning(default : 4996)
             m_log.imbue(utf8_locale);
-        }
-        else
-        {
+        } else {
             printHelp();
         }
         return pos;
@@ -224,16 +202,12 @@ public:
     inline int initBenchmark(wchar_t *in[], int pos, int len)
     {
         m_noOutput = true;
-        if (pos + 1 < len)
-        {
+        if (pos + 1 < len) {
             m_iterations = _wtoi(in[++pos]);
-            if (m_iterations == 0)
-            {
+            if (m_iterations == 0) {
                 printHelp();
             }
-        }
-        else
-        {
+        } else {
             printHelp();
         }
         return pos;
@@ -243,12 +217,10 @@ public:
     inline void run()
     {
         std::chrono::high_resolution_clock::duration time(0);
-        for (int i = 1; m_run && i <= m_iterations; ++i)
-        {
+        for (int i = 1; m_run && i <= m_iterations; ++i) {
             m_exitCode = m_process->run(m_channels);
             time += m_process->time();
-            if (m_iterations > 1)
-            {
+            if (m_iterations > 1) {
                 std::wstringstream ws;
                 ws << "\rBenchmark iteration: "
                    << i
@@ -266,16 +238,13 @@ public:
     {
         if (!m_html)
             return;
-        m_log << "<!DOCTYPE html>\n" <<
-           "<html>\n" <<
-           "<head>\n" <<
-           "<meta charset=\"UTF-8\" />\n" <<
-           "<title>VSD " <<
-           program << " " << arguments <<
-           "</title>\n" <<
-           "</head>\n" <<
-           "<body>";
-
+        m_log << "<!DOCTYPE html>\n"
+              << "<html>\n"
+              << "<head>\n"
+              << "<meta charset=\"UTF-8\" />\n"
+              << "<title>VSD " << program << " " << arguments << "</title>\n"
+              << "</head>\n"
+              << "<body>";
     }
 
     inline void htmlFOOTER()
@@ -288,14 +257,12 @@ public:
 
     inline void printFile(const std::wstring &data, WORD color)
     {
-		if (!m_log.is_open()) {
-			return;
-		}
-        if (m_html && color != 0)
-        {
+        if (!m_log.is_open()) {
+            return;
+        }
+        if (m_html && color != 0) {
             m_log << "<p style=\"color:";
-            switch (color)
-            {
+            switch (color) {
             case FOREGROUND_BLUE:
             case FOREGROUND_BLUE | FOREGROUND_INTENSITY:
                 m_log << "blue";
@@ -314,22 +281,19 @@ public:
             m_log << "\">";
             static std::wregex regex(L"[\\r|\\r\\n]");
             m_log << std::regex_replace(data, regex, L"</br>") << "</p>\n";
-        }
-        else
-        {
+        } else {
             m_log << data;
         }
     }
 
-    std::wstring string_to_hex(const std::wstring& input)
+    std::wstring string_to_hex(const std::wstring &input)
     {
-        static const wchar_t* const lut = L"0123456789ABCDEF";
+        static const wchar_t *const lut = L"0123456789ABCDEF";
         size_t len = input.length();
 
         std::wstring output;
         output.reserve(2 * len);
-        for (size_t i = 0; i < len; ++i)
-        {
+        for (size_t i = 0; i < len; ++i) {
             const wchar_t c = input[i];
             output.push_back(lut[c >> 4]);
             output.push_back(lut[c & 15]);
@@ -341,8 +305,7 @@ public:
     {
         static std::mutex mutex;
         std::lock_guard<std::mutex> lock(mutex);
-        if (printAlways || !m_noOutput)
-        {
+        if (printAlways || !m_noOutput) {
             if (m_colored)
                 SetConsoleTextAttribute(m_hout, color);
             std::wcout << data;
@@ -399,8 +362,7 @@ public:
         ws << "Process Stopped: "
            << process->path()
            << " (" << process->id() << ")";
-        if(!process->error().empty())
-        {
+        if (!process->error().empty()) {
             ws << " Error: "
                << process->error();
         }
@@ -419,8 +381,8 @@ public:
     }
 
     int m_exitCode = 0;
-private:
 
+private:
     VSDProcess *m_process;
     std::wofstream m_log;
     HANDLE m_hout = INVALID_HANDLE_VALUE;
@@ -440,8 +402,7 @@ static VSDImp *vsdimp = nullptr;
 void sighandler(int sig)
 {
     (void)sig;
-    if (vsdimp != nullptr)
-    {
+    if (vsdimp != nullptr) {
         vsdimp->stop();
     }
 }
@@ -454,8 +415,7 @@ int main()
 
     int argc;
     wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if (argc < 2)
-    {
+    if (argc < 2) {
         printHelp();
     }
 
@@ -471,4 +431,3 @@ int main()
     vsdimp = nullptr;
     return ret;
 }
-

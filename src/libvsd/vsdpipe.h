@@ -38,27 +38,27 @@ public:
         const DWORD dwPipeBufferSize = 1024 * 1024;
 
         hRead = CreateNamedPipe(pipeName,
-                                PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-                                dwPipeMode,
-                                1,                      // only one pipe instance
-                                0,                      // output buffer size
-                                dwPipeBufferSize,       // input buffer size
-                                0,
-                                sa);
-        if (hRead == INVALID_HANDLE_VALUE){
+            PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+            dwPipeMode,
+            1, // only one pipe instance
+            0, // output buffer size
+            dwPipeBufferSize, // input buffer size
+            0,
+            sa);
+        if (hRead == INVALID_HANDLE_VALUE) {
             std::wcerr << L"Creation of the NamedPipe " << pipeName << L" failed " << GetLastError() << std::endl;
             return;
         }
 
 
         hWrite = CreateFile(pipeName,
-                            GENERIC_WRITE,
-                            0,
-                            sa,
-                            OPEN_EXISTING,
-                            FILE_FLAG_OVERLAPPED,
-                            nullptr);
-        if (hWrite == INVALID_HANDLE_VALUE){
+            GENERIC_WRITE,
+            0,
+            sa,
+            OPEN_EXISTING,
+            FILE_FLAG_OVERLAPPED,
+            nullptr);
+        if (hWrite == INVALID_HANDLE_VALUE) {
             std::wcerr << L"Creation of the pipe " << pipeName << L" failed " << GetLastError() << std::endl;
             return;
         }
@@ -73,26 +73,23 @@ public:
 
     ~VSDPipe()
     {
-        if (hWrite != INVALID_HANDLE_VALUE)
-        {
+        if (hWrite != INVALID_HANDLE_VALUE) {
             CloseHandle(hWrite);
         }
-        if (hRead != INVALID_HANDLE_VALUE)
-        {
+        if (hRead != INVALID_HANDLE_VALUE) {
             CloseHandle(hRead);
         }
     }
 
-    inline bool operator ==(const VSDPipe& p) const
+    inline bool operator==(const VSDPipe &p) const
     {
         return hWrite == p.hWrite && hRead == p.hRead;
     }
 
 
-
     HANDLE hWrite = INVALID_HANDLE_VALUE;
     HANDLE hRead = INVALID_HANDLE_VALUE;
-    OVERLAPPED overlapped =  {};
+    OVERLAPPED overlapped = {};
 };
 
 #endif // VSDPIPE_H

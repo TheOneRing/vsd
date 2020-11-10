@@ -28,8 +28,7 @@
 #include <chrono>
 #include <map>
 
-namespace libvsd
-{
+namespace libvsd {
 class VSDClient;
 
 class LIBVSD_EXPORT VSDChildProcess
@@ -38,7 +37,7 @@ public:
     VSDChildProcess(VSDClient *client, const unsigned long id, const HANDLE fileHandle);
     virtual ~VSDChildProcess();
 
-    inline const HANDLE& handle() const
+    inline const HANDLE &handle() const
     {
         return m_handle;
     }
@@ -79,18 +78,18 @@ public:
     void stop();
 
 private:
-#pragma warning(disable: 4251)
+#pragma warning(disable : 4251)
 
-    VSDClient  *m_client;
+    VSDClient *m_client;
     unsigned long m_id;
     HANDLE m_handle;
     std::wstring m_path;
-    std::wstring  m_name;
+    std::wstring m_name;
     std::wstring m_error;
     std::chrono::high_resolution_clock::time_point m_startTime;
     std::chrono::high_resolution_clock::duration m_duration;
 
-    std::map <void *, std::wstring> m_dllNames;
+    std::map<void *, std::wstring> m_dllNames;
     uint32_t m_exitCode;
 
     friend class VSDProcess;

@@ -5,7 +5,8 @@
 #include <fcntl.h>
 #include <clocale>
 
-int main() {
+int main()
+{
     std::setlocale(LC_ALL, "en_US.UTF-8");
     _setmode(_fileno(stdout), _O_U8TEXT);
     _setmode(_fileno(stderr), _O_U8TEXT);

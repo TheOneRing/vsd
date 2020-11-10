@@ -32,13 +32,13 @@
 using namespace libvsd;
 
 
-VSDChildProcess::VSDChildProcess(VSDClient *client, const unsigned long id, const HANDLE fileHandle) :
-    m_client(client),
-    m_id(id),
-    m_handle(OpenProcess(PROCESS_ALL_ACCESS, FALSE, id)),
-    m_path(Utils::getFinalPathNameByHandle(fileHandle)),
-    m_startTime(std::chrono::high_resolution_clock::now()),
-    m_exitCode(STILL_ACTIVE)
+VSDChildProcess::VSDChildProcess(VSDClient *client, const unsigned long id, const HANDLE fileHandle)
+    : m_client(client)
+    , m_id(id)
+    , m_handle(OpenProcess(PROCESS_ALL_ACCESS, FALSE, id))
+    , m_path(Utils::getFinalPathNameByHandle(fileHandle))
+    , m_startTime(std::chrono::high_resolution_clock::now())
+    , m_exitCode(STILL_ACTIVE)
 {
     const auto start = m_path.find_last_of(L'\\') + 1;
     m_name = m_path.substr(start, m_path.length() - start - 4);
@@ -51,11 +51,10 @@ VSDChildProcess::~VSDChildProcess()
 
 const std::chrono::high_resolution_clock::duration VSDChildProcess::time() const
 {
-    if (m_exitCode != STILL_ACTIVE)
-    {
+    if (m_exitCode != STILL_ACTIVE) {
         return m_duration;
     }
-    return  std::chrono::high_resolution_clock::now() - m_startTime;
+    return std::chrono::high_resolution_clock::now() - m_startTime;
 }
 
 void VSDChildProcess::processStopped(const uint32_t exitCode)
@@ -66,7 +65,6 @@ void VSDChildProcess::processStopped(const uint32_t exitCode)
 
 void VSDChildProcess::processDied(const uint32_t exitCode, const int errorCode)
 {
-
     processStopped(exitCode);
     m_error = Utils::formatError(errorCode);
 }
@@ -79,8 +77,7 @@ void VSDChildProcess::processDied(const uint32_t exitCode, std::wstring error)
 
 void VSDChildProcess::stop()
 {
-    if (m_exitCode == STILL_ACTIVE)
-    {
+    if (m_exitCode == STILL_ACTIVE) {
         std::wstringstream ws;
         ws << "Killing " << path() << " subprocess" << std::endl;
         m_client->writeErr(ws.str());

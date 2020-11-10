@@ -41,15 +41,14 @@ public:
     virtual void writeErr(const std::wstring &data) = 0;
     virtual void writeDebug(const VSDChildProcess *process, const std::wstring &data) = 0;
     virtual void writeDllLoad(const VSDChildProcess *process, const std::wstring &data, bool loading) = 0;
-    virtual void processStarted(const VSDChildProcess* process) = 0;
-    virtual void processStopped(const VSDChildProcess* process) = 0;
+    virtual void processStarted(const VSDChildProcess *process) = 0;
+    virtual void processStopped(const VSDChildProcess *process) = 0;
 };
 
 class LIBVSD_EXPORT VSDProcess
 {
 public:
-    enum class ProcessChannelMode
-    {
+    enum class ProcessChannelMode {
         SeperateChannels,
         MergedChannels
 
@@ -58,7 +57,7 @@ public:
     VSDProcess(const std::wstring &program, const std::wstring &arguments, VSDClient *client);
     virtual ~VSDProcess();
 
-    int run(VSDProcess::ProcessChannelMode channelMode =  VSDProcess::ProcessChannelMode::MergedChannels);
+    int run(VSDProcess::ProcessChannelMode channelMode = VSDProcess::ProcessChannelMode::MergedChannels);
     void stop();
     void debugSubProcess(bool b);
     void debugDllLoading(bool b);
@@ -70,7 +69,6 @@ public:
 private:
     class PrivateVSDProcess;
     PrivateVSDProcess *d;
-
 };
 }
 

@@ -33,10 +33,9 @@ std::wstring getFinalPathNameByHandle(const HANDLE handle)
 {
     std::wstring out;
     DWORD size = GetFinalPathNameByHandleW(handle, nullptr, 0, FILE_NAME_NORMALIZED);
-    if(size) {
+    if (size) {
         out.resize(size);
-        if (!GetFinalPathNameByHandleW(handle, out.data(), size, FILE_NAME_NORMALIZED))
-        {
+        if (!GetFinalPathNameByHandleW(handle, out.data(), size, FILE_NAME_NORMALIZED)) {
             return L"getFinalPathNameByHandle Failed! " + formatError(GetLastError());
         }
         /* remove \\?\ */
