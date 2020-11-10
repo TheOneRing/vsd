@@ -65,6 +65,7 @@ void printHelp()
                L"--vsd-logplain logFile \t\t write a log to logFile" << std::endl <<
                L"--vsd-all\t\t\t debug also all processes created by TARGET_APPLICATION" << std::endl <<
                L"--vsd-debug-dll\t\t\t Debugg dll loading" << std::endl <<
+               L"--vsd-log-dll\t\t\t Log dll loading" << std::endl <<
                L"--vsd-nc \t\t\t monochrome output" << std::endl <<
                L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome" << std::endl <<
                L"--help \t\t\t\t print this help" << std::endl <<
@@ -104,6 +105,8 @@ public:
             else if (arg == L"--vsd-debug-dll")
             {
                 debug_dll = true;
+            } else if (arg == L"--vsd-log-dll") {
+                m_logDll = true;
             }
             else if (arg == L"--vsd-log")
             {
@@ -347,9 +350,11 @@ public:
 
     void writeDllLoad(const VSDChildProcess *process, const std::wstring &data, bool loading)
     {
-        std::wstringstream ws;
-        ws << process->name() << L"(" << process->id() << L"): " << (loading ? L"Loading: " : L"Unloading: ") << data << std::endl;
-        print(ws.str(), FOREGROUND_GREEN);
+        if (m_logDll) {
+            std::wstringstream ws;
+            ws << process->name() << L"(" << process->id() << L"): " << (loading ? L"Loading: " : L"Unloading: ") << data << std::endl;
+            print(ws.str(), FOREGROUND_GREEN);
+        }
     }
 
     inline void processStarted(const VSDChildProcess *process)
@@ -396,6 +401,7 @@ private:
     bool m_noOutput = false;
     int m_iterations = 1;
     bool m_run = true;
+    bool m_logDll = false;
     VSDProcess::ProcessChannelMode m_channels = VSDProcess::MergedChannels;    
 };
 
