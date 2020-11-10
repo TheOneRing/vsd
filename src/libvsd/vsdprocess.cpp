@@ -25,7 +25,7 @@
 #include "vsdpipe.h"
 #include "utils.h"
 
-#include "ceee/gflag_utils.h"
+#include "3dparty/ceee/gflag_utils.h"
 
 #include <windows.h>
 #include <winbase.h>

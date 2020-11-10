@@ -1,6 +1,6 @@
 include(GenerateExportHeader)
 
-add_library(libvsd_gflags STATIC ../ceee/gflag_utils.cc)
+add_library(libvsd_gflags STATIC ${PROJECT_SOURCE_DIR}/src/3dparty/ceee/gflag_utils.cc)
 target_link_libraries(libvsd_gflags PUBLIC ntdll)
 
 add_library(libvsd ${LIBVSD_BUILDTYPE} vsdprocess.cpp vsdchildprocess.cpp utils.cpp)
@@ -11,9 +11,8 @@ generate_export_header(libvsd
   EXPORT_MACRO_NAME LIBVSD_EXPORT
 )
 
-target_include_directories(libvsd PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
-                                         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-                                         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3dparty/ceee/>)
+target_include_directories(libvsd PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+                                         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/>)
 install(TARGETS libvsd RUNTIME DESTINATION bin
                      LIBRARY DESTINATION lib
                      ARCHIVE DESTINATION lib)
