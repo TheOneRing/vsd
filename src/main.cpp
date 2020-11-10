@@ -55,6 +55,19 @@ inline std::wstring rtrim(std::wstring s) {
     }).base(), s.end());
     return s;
 }
+
+std::filesystem::path configPath() {
+    std::wstring buf;
+    size_t size;
+    do {
+        buf.resize(buf.size() + 1024);
+        size = GetModuleFileNameW(nullptr, const_cast<wchar_t*>(buf.data()),
+            static_cast<DWORD>(buf.size()));
+    } while (GetLastError() == ERROR_INSUFFICIENT_BUFFER);
+    buf.resize(size);
+    std::filesystem::path path(buf);
+    return path.parent_path() / L"vsd.conf";
+}
 }
 
 using namespace libvsd;
@@ -97,7 +110,7 @@ public:
         std::wstringstream arguments;
         nlohmann::json config = nlohmann::json::parse("{}");
 
-        const std::filesystem::path confFile = "./vsd.conf";
+        const std::filesystem::path confFile = configPath();
         if (std::filesystem::exists(confFile))
         {
             std::ifstream stream(confFile);
