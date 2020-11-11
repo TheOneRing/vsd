@@ -71,6 +71,164 @@ std::filesystem::path configPath()
     std::filesystem::path path(buf);
     return path.parent_path() / L"vsd.conf";
 }
+
+class ColorStream
+{
+public:
+    ColorStream() = default;
+    virtual ~ColorStream() {};
+    virtual ColorStream &setColor(WORD color) = 0;
+    virtual ColorStream &operator<<(const std::wstring_view &) = 0;
+
+    ColorStream &operator<<(int i)
+    {
+        return *this << std::to_wstring(i);
+    };
+};
+
+class ColorGroupoStream : public ColorStream
+{
+public:
+    ~ColorGroupoStream()
+    {
+        for (const auto str : m_streams) {
+            delete str;
+        }
+        m_streams.clear();
+    }
+    ColorStream &setColor(WORD color) override
+    {
+        for (const auto str : m_streams) {
+            str->setColor(color);
+        }
+        return *this;
+    }
+
+    void addStream(ColorStream *stream)
+    {
+        m_streams.push_back(stream);
+    }
+
+    ColorStream &operator<<(const std::wstring_view &x) override
+    {
+        for (const auto str : m_streams) {
+            *str << x;
+        }
+        return *this;
+    }
+
+private:
+    std::vector<ColorStream *> m_streams;
+};
+
+class ColorOutStream : public ColorStream
+{
+public:
+    ColorOutStream(HANDLE hout)
+        : m_hout(hout)
+    {
+    }
+    virtual ColorStream &setColor(WORD color) override
+    {
+        SetConsoleTextAttribute(m_hout, color);
+        return *this;
+    };
+
+    ColorStream &operator<<(const std::wstring_view &x) override
+    {
+        std::wcout << x;
+        return *this;
+    }
+
+private:
+    HANDLE m_hout;
+};
+
+
+class SimpleFileStream : public ColorStream
+{
+public:
+    SimpleFileStream(const std::filesystem::path &name)
+    {
+        m_out.open(name, std::ios::out | std::ios::binary);
+        // unsigned char utf8BOM[] = {0xEF,0xBB,0xBF};
+        // m_out.write((wchar_t*)utf8BOM,sizeof(utf8BOM)/2);
+#pragma warning(disable : 4996)
+        const std::locale utf8_locale = std::locale(std::locale(),
+            new std::codecvt_utf8_utf16<wchar_t, 0x10ffff, std::codecvt_mode(std::consume_header | std::generate_header)>);
+#pragma warning(default : 4996)
+        m_out.imbue(utf8_locale);
+    }
+    virtual ~SimpleFileStream()
+    {
+        m_out.close();
+    }
+
+    virtual ColorStream &setColor(WORD) override
+    {
+        return *this;
+    };
+
+    ColorStream &operator<<(const std::wstring_view &x) override
+    {
+        m_out << x;
+        return *this;
+    }
+
+protected:
+    std::wofstream m_out;
+};
+
+class ColorFileStream : public SimpleFileStream
+{
+public:
+    ColorFileStream(const std::filesystem::path &name, const std::wstring &program, const std::wstring &arguments)
+        : SimpleFileStream(name)
+    {
+        m_out << "<!DOCTYPE html>\n"
+              << "<html>\n"
+              << "<head>\n"
+              << "<meta charset=\"UTF-8\" />\n"
+              << "<title>VSD " << program << " " << arguments << "</title>\n"
+              << "</head>\n"
+              << "<body>"
+              << "<p style=\"color:blue\">";
+    }
+    ~ColorFileStream()
+    {
+        m_out << "</body>\n\n</html>\n";
+    }
+
+    virtual ColorStream &setColor(WORD color) override
+    {
+        m_out << "</p><p style=\"color:";
+        switch (color) {
+        case FOREGROUND_BLUE:
+        case FOREGROUND_BLUE | FOREGROUND_INTENSITY:
+            m_out << "blue";
+            break;
+        case FOREGROUND_GREEN:
+        case FOREGROUND_GREEN | FOREGROUND_INTENSITY:
+            m_out << "green";
+            break;
+        case FOREGROUND_RED:
+        case FOREGROUND_RED | FOREGROUND_INTENSITY:
+            m_out << "red";
+            break;
+        default:
+            m_out << "black";
+        }
+        m_out << "\">";
+        return *this;
+    };
+
+    ColorStream &operator<<(const std::wstring_view &x) override
+    {
+        static std::wregex regex(L"[\\r|\\r\\n]");
+        m_out << std::regex_replace(x.data(), regex, L"</br>") << "\n";
+        return *this;
+    }
+};
 }
 
 using namespace libvsd;
@@ -123,7 +281,8 @@ public:
         m_logDll = config.value("logDllLoading", false);
         bool withSubProcess = config.value("attachSubprocess", false);
 
-        m_html = config.value("logHtml", true);
+        std::filesystem::path logFile;
+        bool htmlLog = config.value("logHtml", true);
         m_channels = config.value("mergeChannels", true) ? VSDProcess::ProcessChannelMode::MergedChannels : VSDProcess::ProcessChannelMode::SeperateChannels;
 
 
@@ -136,10 +295,19 @@ public:
             } else if (arg == L"--vsd-log-dll") {
                 m_logDll = true;
             } else if (arg == L"--vsd-log") {
-                i = initLog(in, i, len);
+                htmlLog = true;
+                if (i + 1 < len) {
+                    logFile = in[++i];
+                } else {
+                    printHelp();
+                }
             } else if (arg == L"--vsd-logplain") {
-                m_html = false;
-                i = initLog(in, i, len);
+                htmlLog = false;
+                if (i + 1 < len) {
+                    logFile = in[++i];
+                } else {
+                    printHelp();
+                }
             } else if (arg == L"--vsd-all") {
                 withSubProcess = true;
             } else if (arg == L"--vsd-nc") {
@@ -160,10 +328,16 @@ public:
         m_hout = GetStdHandle(STD_OUTPUT_HANDLE);
         GetConsoleScreenBufferInfo(m_hout, &m_consoleSettings);
 
-        htmlHEADER(program, arguments.str());
-        std::wstringstream ws;
-        ws << program << L" " << arguments.str() << std::endl;
-        print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        m_out.addStream(new ColorOutStream(m_hout));
+
+        if (!logFile.empty()) {
+            if (htmlLog) {
+                m_out.addStream(new ColorFileStream(logFile, program, arguments.str()));
+            } else {
+                m_out.addStream(new SimpleFileStream(logFile));
+            }
+        }
+        m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY) << program << L" " << arguments.str() << L"\n";
 
         m_process = new VSDProcess(program, arguments.str(), this);
         m_process->debugDllLoading(debug_dll);
@@ -172,32 +346,9 @@ public:
 
     ~VSDImp()
     {
-        std::wcout.flush();
-        std::wcerr.flush();
-
         delete m_process;
-        if (m_writeFile) {
-            htmlFOOTER();
-            m_log.flush();
-        }
         SetConsoleTextAttribute(m_hout, m_consoleSettings.wAttributes);
         CloseHandle(m_hout);
-    }
-
-    inline int initLog(wchar_t *in[], int pos, int len)
-    {
-        m_writeFile = true;
-        if (pos + 1 < len) {
-            std::wstring name(in[++pos]);
-            m_log.open(std::string(name.begin(), name.end()).data(), std::ios::out | std::ios::binary);
-#pragma warning(disable : 4996)
-            const std::locale utf8_locale = std::locale(std::locale(), new std::codecvt_utf8<wchar_t>());
-#pragma warning(default : 4996)
-            m_log.imbue(utf8_locale);
-        } else {
-            printHelp();
-        }
-        return pos;
     }
 
     inline int initBenchmark(wchar_t *in[], int pos, int len)
@@ -222,69 +373,16 @@ public:
             m_exitCode = m_process->run(m_channels);
             time += m_process->time();
             if (m_iterations > 1) {
-                std::wstringstream ws;
-                ws << "\rBenchmark iteration: "
-                   << i
-                   << ", mean execution time: "
-                   << getTimestamp(time / i)
-                   << " total execution time "
-                   << getTimestamp(time);
-                print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY, true);
+                m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY)
+                    << L"\rBenchmark iteration: "
+                    << i
+                    << L", mean execution time: "
+                    << getTimestamp(time / i)
+                    << L" total execution time "
+                    << getTimestamp(time);
             }
         }
-        print(L"\n", 0);
-    }
-
-    inline void htmlHEADER(const std::wstring &program, const std::wstring &arguments)
-    {
-        if (!m_html)
-            return;
-        m_log << "<!DOCTYPE html>\n"
-              << "<html>\n"
-              << "<head>\n"
-              << "<meta charset=\"UTF-8\" />\n"
-              << "<title>VSD " << program << " " << arguments << "</title>\n"
-              << "</head>\n"
-              << "<body>";
-    }
-
-    inline void htmlFOOTER()
-    {
-        if (!m_html)
-            return;
-        m_log << "</body>\n\n</html>\n";
-    }
-
-
-    inline void printFile(const std::wstring &data, WORD color)
-    {
-        if (!m_writeFile) {
-            return;
-        }
-        if (m_html && color != 0) {
-            m_log << "<p style=\"color:";
-            switch (color) {
-            case FOREGROUND_BLUE:
-            case FOREGROUND_BLUE | FOREGROUND_INTENSITY:
-                m_log << "blue";
-                break;
-            case FOREGROUND_GREEN:
-            case FOREGROUND_GREEN | FOREGROUND_INTENSITY:
-                m_log << "green";
-                break;
-            case FOREGROUND_RED:
-            case FOREGROUND_RED | FOREGROUND_INTENSITY:
-                m_log << "red";
-                break;
-            default:
-                m_log << "black";
-            }
-            m_log << "\">";
-            static std::wregex regex(L"[\\r|\\r\\n]");
-            m_log << std::regex_replace(data, regex, L"</br>") << "</p>\n";
-        } else {
-            m_log << data;
-        }
+        m_out.setColor(0) << L"\n";
     }
 
     std::wstring string_to_hex(const std::wstring &input)
@@ -302,18 +400,6 @@ public:
         return output;
     }
 
-    inline void print(const std::wstring &data, WORD color, bool printAlways = false)
-    {
-        static std::mutex mutex;
-        std::lock_guard<std::mutex> lock(mutex);
-        if (printAlways || !m_noOutput) {
-            if (m_colored)
-                SetConsoleTextAttribute(m_hout, color);
-            std::wcout << data;
-        }
-        printFile(data, color);
-    }
-
     inline std::wstring getTimestamp(const std::chrono::high_resolution_clock::duration &time)
     {
         std::wstringstream out;
@@ -326,53 +412,48 @@ public:
 
     inline void writeStdout(const std::wstring &data)
     {
-        print(data, m_consoleSettings.wAttributes);
+        m_out.setColor(m_consoleSettings.wAttributes) << data;
     }
 
     inline void writeErr(const std::wstring &data)
     {
-        print(data, FOREGROUND_RED | FOREGROUND_INTENSITY);
+        m_out.setColor(FOREGROUND_RED | FOREGROUND_INTENSITY) << data;
     }
 
     inline void writeDebug(const VSDChildProcess *process, const std::wstring &data)
     {
-        std::wstringstream ws;
-        ws << process->name() << L"(" << process->id() << L"): " << rtrim(data) << std::endl;
-        print(ws.str(), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        m_out.setColor(FOREGROUND_GREEN | FOREGROUND_INTENSITY) << process->name() << L"(" << process->id() << L"): " << rtrim(data) << L"\n";
     }
 
     void writeDllLoad(const VSDChildProcess *process, const std::wstring &data, bool loading)
     {
         if (m_logDll) {
-            std::wstringstream ws;
-            ws << process->name() << L"(" << process->id() << L"): " << (loading ? L"Loading: " : L"Unloading: ") << data << std::endl;
-            print(ws.str(), FOREGROUND_GREEN);
+            m_out.setColor(FOREGROUND_GREEN) << process->name() << L"(" << process->id() << L"): " << (loading ? L"Loading: " : L"Unloading: ") << data << L"\n";
         }
     }
 
     inline void processStarted(const VSDChildProcess *process)
     {
-        std::wstringstream ws;
-        ws << "Process Created: " << process->path() << " (" << process->id() << ")" << std::endl;
-        print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY) << L"Process Created: " << process->path() << L" (" << process->id() << L")\n";
     }
 
     inline void processStopped(const VSDChildProcess *process)
     {
-        std::wstringstream ws;
-        ws << "Process Stopped: "
-           << process->path()
-           << " (" << process->id() << ")";
+        m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY)
+            << L"Process Stopped: "
+            << process->path()
+            << L" (" << process->id() << L")";
         if (!process->error().empty()) {
-            ws << " Error: "
-               << process->error();
+            m_out << L" Error: "
+                  << process->error();
         }
-        ws << " With exit Code: "
-           << std::hex << process->exitCode() << std::dec
-           << " After: "
-           << getTimestamp(process->time())
-           << std::endl;
-        print(ws.str(), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        std::wstringstream exitCode;
+        exitCode << std::hex << process->exitCode();
+        m_out << L" With exit Code: "
+              << exitCode.str()
+              << L" After: "
+              << getTimestamp(process->time())
+              << L"\n";
     }
 
     inline void stop()
@@ -384,17 +465,15 @@ public:
     int m_exitCode = 0;
 
 private:
+    ColorGroupoStream m_out;
     VSDProcess *m_process;
-    std::wofstream m_log;
     HANDLE m_hout = INVALID_HANDLE_VALUE;
     CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
     bool m_colored = true;
-    bool m_html = true;
     bool m_noOutput = false;
     int m_iterations = 1;
     bool m_run = true;
     bool m_logDll = false;
-    bool m_writeFile = false;
     VSDProcess::ProcessChannelMode m_channels = VSDProcess::ProcessChannelMode::MergedChannels;
 };
 
