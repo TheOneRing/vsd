@@ -176,7 +176,7 @@ public:
         std::wcerr.flush();
 
         delete m_process;
-        if (m_log.is_open()) {
+        if (m_writeFile) {
             htmlFOOTER();
             m_log.flush();
         }
@@ -186,6 +186,7 @@ public:
 
     inline int initLog(wchar_t *in[], int pos, int len)
     {
+        m_writeFile = true;
         if (pos + 1 < len) {
             std::wstring name(in[++pos]);
             m_log.open(std::string(name.begin(), name.end()).data(), std::ios::out | std::ios::binary);
@@ -257,7 +258,7 @@ public:
 
     inline void printFile(const std::wstring &data, WORD color)
     {
-        if (!m_log.is_open()) {
+        if (!m_writeFile) {
             return;
         }
         if (m_html && color != 0) {
@@ -393,6 +394,7 @@ private:
     int m_iterations = 1;
     bool m_run = true;
     bool m_logDll = false;
+    bool m_writeFile = false;
     VSDProcess::ProcessChannelMode m_channels = VSDProcess::ProcessChannelMode::MergedChannels;
 };
 
