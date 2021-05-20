@@ -44,7 +44,7 @@
 #include <codecvt>
 
 namespace {
-inline bool iseol(wchar_t c)
+constexpr bool iseol(wchar_t c)
 {
     return c == L'\n' || c == L'\r';
 }
@@ -244,6 +244,7 @@ void printHelp()
                << L"--vsd-debug-dll\t\t\t Debugg dll loading" << std::endl
                << L"--vsd-log-dll\t\t\t Log dll loading" << std::endl
                << L"--vsd-nc \t\t\t monochrome output" << std::endl
+               << L"--vsd-no-console\t\tdon't log to console" << std::endl
                << L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome" << std::endl
                << L"--help \t\t\t\t print this help" << std::endl
                << L"--version\t\t\t print version and copyright information" << std::endl;
@@ -254,7 +255,7 @@ void printVersion()
 {
     std::wcout << L"VSD version 0.8.0" << std::endl
                << std::endl
-               << L"Copyright (C) 2012-2020  Hannah von Reth <vonreth@kde.org>" << std::endl
+               << L"Copyright (C) 2012-2021  Hannah von Reth <vonreth@kde.org>" << std::endl
                << std::endl
                << L"VSD is free software: you can redistribute it and/or modify" << std::endl
                << L"it under the terms of the GNU Lesser General Public License as published by" << std::endl
@@ -312,6 +313,8 @@ public:
                 withSubProcess = true;
             } else if (arg == L"--vsd-nc") {
                 m_colored = false;
+            } else if (arg == L"--vsd-no-console") {
+                m_noOutput = true;
             } else if (arg == L"--vsd-benchmark") {
                 i = initBenchmark(in, i, len);
             } else if (i == 1) {
@@ -325,10 +328,11 @@ public:
             }
         }
 
-        m_hout = GetStdHandle(STD_OUTPUT_HANDLE);
-        GetConsoleScreenBufferInfo(m_hout, &m_consoleSettings);
-
-        m_out.addStream(new ColorOutStream(m_hout));
+        if (!m_noOutput) {
+            m_hout = GetStdHandle(STD_OUTPUT_HANDLE);
+            GetConsoleScreenBufferInfo(m_hout, &m_consoleSettings);
+            m_out.addStream(new ColorOutStream(m_hout));
+        }
 
         if (!logFile.empty()) {
             if (htmlLog) {
