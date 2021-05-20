@@ -225,7 +225,7 @@ public:
     ColorStream &operator<<(const std::wstring_view &x) override
     {
         static std::wregex regex(L"[\\r|\\r\\n]");
-        m_out << std::regex_replace(x.data(), regex, L"</br>") << "\n";
+        m_out << std::regex_replace(x.data(), regex, L"</br>");
         return *this;
     }
 };
