@@ -30,6 +30,7 @@
 #include <winbase.h>
 #include <iostream>
 #include <sstream>
+#include <psapi.h>
 
 
 #include <stdlib.h>
@@ -42,6 +43,108 @@
 using namespace libvsd;
 
 static HANDLE SHUTDOWN_EVENT = CreateEvent(nullptr, false, false, L"Shutdown Event");
+
+namespace {
+
+std::wstring formatException(int exceptionCode)
+{
+#define exeptionString(x) \
+    case x:               \
+        return std::wstring(L#x);
+    switch (exceptionCode) {
+        exeptionString(EXCEPTION_ACCESS_VIOLATION);
+        exeptionString(EXCEPTION_ARRAY_BOUNDS_EXCEEDED);
+        exeptionString(EXCEPTION_BREAKPOINT);
+        exeptionString(EXCEPTION_DATATYPE_MISALIGNMENT);
+        exeptionString(EXCEPTION_FLT_DENORMAL_OPERAND);
+        exeptionString(EXCEPTION_FLT_DIVIDE_BY_ZERO);
+        exeptionString(EXCEPTION_FLT_INEXACT_RESULT);
+        exeptionString(EXCEPTION_FLT_INVALID_OPERATION);
+        exeptionString(EXCEPTION_FLT_OVERFLOW);
+        exeptionString(EXCEPTION_FLT_STACK_CHECK);
+        exeptionString(EXCEPTION_FLT_UNDERFLOW);
+        exeptionString(EXCEPTION_ILLEGAL_INSTRUCTION);
+        exeptionString(EXCEPTION_IN_PAGE_ERROR);
+        exeptionString(EXCEPTION_INT_DIVIDE_BY_ZERO);
+        exeptionString(EXCEPTION_INT_OVERFLOW);
+        exeptionString(EXCEPTION_INVALID_DISPOSITION);
+        exeptionString(EXCEPTION_NONCONTINUABLE_EXCEPTION);
+        exeptionString(EXCEPTION_PRIV_INSTRUCTION);
+        exeptionString(EXCEPTION_SINGLE_STEP);
+        exeptionString(EXCEPTION_STACK_OVERFLOW);
+    default:
+        return std::to_wstring(exceptionCode);
+    }
+}
+
+std::pair<HMODULE, std::wstring> getExceptionModule(HANDLE process, HMODULE address)
+{
+    HMODULE moduleList[1024];
+    DWORD sizeNeeded = 0;
+    if (!EnumProcessModules(process, moduleList, 1024, &sizeNeeded) || sizeNeeded < sizeof(HMODULE)) {
+        return { nullptr, L"(Error: EnumProcessModules: " + Utils::formatError(GetLastError()) + L")" };
+    }
+
+    const auto count = sizeNeeded / sizeof(HMODULE);
+    HMODULE handle = nullptr;
+    for (int i = 0; i < count; ++i) {
+        if (moduleList[i] < address) {
+            if (handle == nullptr)
+                handle = moduleList[i];
+            else {
+                if (handle < moduleList[i]) {
+                    handle = moduleList[i];
+                }
+            }
+        }
+    }
+
+    if (handle == nullptr) {
+        return { nullptr, L"(Error: Failed to find modules)" };
+    }
+    return { handle, {} };
+}
+
+std::wstring getExceptionInfo(HANDLE process, const EXCEPTION_RECORD &rec)
+{
+    const auto info = getExceptionModule(process, static_cast<HMODULE>(rec.ExceptionAddress));
+    if (!info.first) {
+        return info.second;
+    }
+
+    MODULEINFO mi = {};
+    if (!GetModuleInformation(process, info.first, &mi, sizeof(mi))) {
+        return L"(Error: GetModuleInformation: " + Utils::formatError(GetLastError()) + L")";
+    }
+
+    std::wstringstream oss;
+    oss << formatException(rec.ExceptionCode) << " at address 0x" << std::hex << rec.ExceptionAddress << std::dec
+        << " in " << Utils::getModuleName(process, info.first) << " loaded at base address 0x" << std::hex << mi.lpBaseOfDll << "\n";
+
+    if (rec.ExceptionCode == EXCEPTION_ACCESS_VIOLATION || rec.ExceptionCode == EXCEPTION_IN_PAGE_ERROR) {
+        oss << "Invalid operation: ";
+        switch (rec.ExceptionInformation[0]) {
+        case 0:
+            oss << "read";
+            break;
+        case 1:
+            oss << "write";
+            break;
+        case 8:
+            oss << "user-mode data execution prevention (DEP) violation";
+            break;
+        default:
+            oss << "unknown";
+        }
+        oss << " at address 0x" << std::hex << rec.ExceptionInformation[1] << std::dec << "\n";
+    }
+    if (rec.ExceptionCode == EXCEPTION_IN_PAGE_ERROR) {
+        oss << "Underlying NTSTATUS code that resulted in the exception " << rec.ExceptionInformation[2] << "\n";
+    }
+    return oss.str();
+}
+}
+
 
 class VSDProcess::PrivateVSDProcess
 {
@@ -118,7 +221,7 @@ public:
             m_exitCode = debugEvent.u.ExitProcess.dwExitCode;
             m_time = child->time();
 
-            for (auto it : m_children) //first stop everything and then cleanup
+            for (auto it : m_children) // first stop everything and then cleanup
             {
                 it.second->stop();
             }
@@ -170,10 +273,6 @@ public:
         m_client->writeDllLoad(child, out, false);
     }
 
-#define exeptionString(x) \
-    case x:               \
-        out << #x;        \
-        break
     inline DWORD readException(DEBUG_EVENT &debugEvent)
     {
         VSDChildProcess *child = m_children[debugEvent.dwProcessId];
@@ -181,32 +280,9 @@ public:
         if (debugEvent.u.Exception.dwFirstChance == 0) {
             std::wstringstream out;
             out << L"Unhandled Exception: ";
-            switch (debugEvent.u.Exception.ExceptionRecord.ExceptionCode) {
-                exeptionString(EXCEPTION_ACCESS_VIOLATION);
-                exeptionString(EXCEPTION_ARRAY_BOUNDS_EXCEEDED);
-                exeptionString(EXCEPTION_BREAKPOINT);
-                exeptionString(EXCEPTION_DATATYPE_MISALIGNMENT);
-                exeptionString(EXCEPTION_FLT_DENORMAL_OPERAND);
-                exeptionString(EXCEPTION_FLT_DIVIDE_BY_ZERO);
-                exeptionString(EXCEPTION_FLT_INEXACT_RESULT);
-                exeptionString(EXCEPTION_FLT_INVALID_OPERATION);
-                exeptionString(EXCEPTION_FLT_OVERFLOW);
-                exeptionString(EXCEPTION_FLT_STACK_CHECK);
-                exeptionString(EXCEPTION_FLT_UNDERFLOW);
-                exeptionString(EXCEPTION_ILLEGAL_INSTRUCTION);
-                exeptionString(EXCEPTION_IN_PAGE_ERROR);
-                exeptionString(EXCEPTION_INT_DIVIDE_BY_ZERO);
-                exeptionString(EXCEPTION_INT_OVERFLOW);
-                exeptionString(EXCEPTION_INVALID_DISPOSITION);
-                exeptionString(EXCEPTION_NONCONTINUABLE_EXCEPTION);
-                exeptionString(EXCEPTION_PRIV_INSTRUCTION);
-                exeptionString(EXCEPTION_SINGLE_STEP);
-                exeptionString(EXCEPTION_STACK_OVERFLOW);
-            default:
-                out << debugEvent.u.Exception.ExceptionRecord.ExceptionCode;
-            }
+            out << getExceptionInfo(child->handle(), debugEvent.u.Exception.ExceptionRecord);
             child->processDied(debugEvent.u.ExitProcess.dwExitCode, out.str());
-            //dont delete child !!
+            // dont delete child !!
         }
         return DBG_EXCEPTION_NOT_HANDLED;
     }

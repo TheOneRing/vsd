@@ -26,6 +26,7 @@
 #include <string>
 #include <windows.h>
 #include <sstream>
+#include <psapi.h>
 
 namespace Utils {
 
@@ -61,4 +62,19 @@ std::wstring formatError(unsigned long errorCode)
     return out.str();
 }
 
+std::wstring getModuleName(HANDLE process, HMODULE handle)
+{
+    std::wstring out;
+    size_t size = 0;
+    do {
+        out.resize(out.size() + 1024);
+        size = GetModuleFileNameExW(process, handle, out.data(), out.size());
+    } while (GetLastError() == ERROR_INSUFFICIENT_BUFFER);
+
+    if (!size) {
+        return L"(Error: GetModuleFileNameExW: " + Utils::formatError(GetLastError()) + L")";
+    }
+    out.resize(size);
+    return out;
+}
 }

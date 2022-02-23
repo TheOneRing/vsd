@@ -20,6 +20,7 @@
 
 #include "libvsd/vsdprocess.h"
 #include "libvsd/vsdchildprocess.h"
+#include "libvsd/utils.h"
 
 #include "3dparty/nlohmann/json.hpp"
 
@@ -60,15 +61,7 @@ inline std::wstring rtrim(std::wstring s)
 
 std::filesystem::path configPath()
 {
-    std::wstring buf;
-    size_t size;
-    do {
-        buf.resize(buf.size() + 1024);
-        size = GetModuleFileNameW(nullptr, const_cast<wchar_t *>(buf.data()),
-            static_cast<DWORD>(buf.size()));
-    } while (GetLastError() == ERROR_INSUFFICIENT_BUFFER);
-    buf.resize(size);
-    std::filesystem::path path(buf);
+    std::filesystem::path path(Utils::getModuleName(GetCurrentProcess(), nullptr));
     return path.parent_path() / L"vsd.conf";
 }
 
@@ -452,7 +445,7 @@ public:
                   << process->error();
         }
         std::wstringstream exitCode;
-        exitCode << std::hex << process->exitCode();
+        exitCode << L"0x" << std::hex << process->exitCode();
         m_out << L" With exit Code: "
               << exitCode.str()
               << L" After: "

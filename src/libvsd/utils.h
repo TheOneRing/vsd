@@ -23,8 +23,9 @@
 
 #include <string>
 #include <algorithm>
+#include <windows.h>
 
-typedef void *HANDLE;
+#include "vsd_exports.h"
 
 namespace Utils {
 inline void trimNull(std::wstring &s)
@@ -41,6 +42,8 @@ std::wstring getFinalPathNameByHandle(const HANDLE handle);
 std::wstring multiByteToWideChar(const std::string &data);
 
 std::wstring formatError(unsigned long errorCode);
+
+LIBVSD_EXPORT std::wstring getModuleName(HANDLE process, HMODULE handle);
 };
 
 #endif // UTILS_H
