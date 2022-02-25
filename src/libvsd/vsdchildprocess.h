@@ -23,13 +23,43 @@
 
 #include "vsd_exports.h"
 
-#include <windows.h>
-#include <string>
 #include <chrono>
+#include <filesystem>
 #include <map>
+#include <optional>
+#include <string>
+
+#include <windows.h>
+
+// needs to be included after windows.h
+#include <psapi.h>
 
 namespace libvsd {
 class VSDClient;
+class VSDChildProcess;
+
+class Module
+{
+public:
+    Module(const LOAD_DLL_DEBUG_INFO &info, VSDChildProcess *parent);
+
+    std::optional<MODULEINFO> info() const;
+    const auto &name() const
+    {
+        return m_name;
+    }
+    const std::wstring &error() const
+    {
+        return m_error;
+    }
+
+private:
+    VSDChildProcess *m_parent = nullptr;
+    const HMODULE m_module = nullptr;
+    mutable std::wstring m_error;
+    mutable MODULEINFO m_info = {};
+    const std::filesystem::path m_name;
+};
 
 class LIBVSD_EXPORT VSDChildProcess
 {
@@ -77,6 +107,12 @@ public:
 
     void stop();
 
+    std::optional<Module> getExceptionModule(void *address) const;
+
+    std::optional<Module> addModule(const LOAD_DLL_DEBUG_INFO &info);
+
+    std::optional<Module> getModul(HMODULE baseAddress) const;
+
 private:
 #pragma warning(disable : 4251)
 
@@ -89,10 +125,8 @@ private:
     std::chrono::high_resolution_clock::time_point m_startTime;
     std::chrono::high_resolution_clock::duration m_duration;
 
-    std::map<void *, std::wstring> m_dllNames;
     uint32_t m_exitCode;
-
-    friend class VSDProcess;
+    std::map<HMODULE, Module> m_modules;
 };
 
 }

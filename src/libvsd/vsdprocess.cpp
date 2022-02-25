@@ -77,49 +77,19 @@ std::wstring formatException(int exceptionCode)
     }
 }
 
-std::pair<HMODULE, std::wstring> getExceptionModule(HANDLE process, HMODULE address)
+std::wstring getExceptionInfo(VSDChildProcess *process, const EXCEPTION_RECORD &rec)
 {
-    HMODULE moduleList[1024];
-    DWORD sizeNeeded = 0;
-    if (!EnumProcessModules(process, moduleList, 1024, &sizeNeeded) || sizeNeeded < sizeof(HMODULE)) {
-        return { nullptr, L"(Error: EnumProcessModules: " + Utils::formatError(GetLastError()) + L")" };
+    const auto module = process->getExceptionModule(rec.ExceptionAddress);
+    if (!module) {
+        return L"(Error: Module not found)";
     }
-
-    const auto count = sizeNeeded / sizeof(HMODULE);
-    HMODULE handle = nullptr;
-    for (int i = 0; i < count; ++i) {
-        if (moduleList[i] < address) {
-            if (handle == nullptr)
-                handle = moduleList[i];
-            else {
-                if (handle < moduleList[i]) {
-                    handle = moduleList[i];
-                }
-            }
-        }
+    const auto info = module->info();
+    if (!info) {
+        return module->error();
     }
-
-    if (handle == nullptr) {
-        return { nullptr, L"(Error: Failed to find modules)" };
-    }
-    return { handle, {} };
-}
-
-std::wstring getExceptionInfo(HANDLE process, const EXCEPTION_RECORD &rec)
-{
-    const auto info = getExceptionModule(process, static_cast<HMODULE>(rec.ExceptionAddress));
-    if (!info.first) {
-        return info.second;
-    }
-
-    MODULEINFO mi = {};
-    if (!GetModuleInformation(process, info.first, &mi, sizeof(mi))) {
-        return L"(Error: GetModuleInformation: " + Utils::formatError(GetLastError()) + L")";
-    }
-
     std::wstringstream oss;
     oss << formatException(rec.ExceptionCode) << " at address 0x" << std::hex << rec.ExceptionAddress << std::dec
-        << " in " << Utils::getModuleName(process, info.first) << " loaded at base address 0x" << std::hex << mi.lpBaseOfDll << "\n";
+        << " in " << module->name() << " loaded at base address 0x" << std::hex << info->lpBaseOfDll << "\n";
 
     if (rec.ExceptionCode == EXCEPTION_ACCESS_VIOLATION || rec.ExceptionCode == EXCEPTION_IN_PAGE_ERROR) {
         oss << "Invalid operation: ";
@@ -241,36 +211,15 @@ public:
     inline void dllLoadEvent(DEBUG_EVENT &debugEvent)
     {
         VSDChildProcess *child = m_children.at(debugEvent.dwProcessId);
-        const LOAD_DLL_DEBUG_INFO &DebugDll = debugEvent.u.LoadDll;
-        const auto it = child->m_dllNames.find(DebugDll.lpBaseOfDll);
-        std::wstring out;
-        if (it != child->m_dllNames.cend()) {
-            out = it->second;
-        }
-        if (DebugDll.hFile) {
-            if (out.empty()) {
-                out = Utils::getFinalPathNameByHandle(DebugDll.hFile);
-                child->m_dllNames.emplace(DebugDll.lpBaseOfDll, out);
-            }
-            CloseHandle(DebugDll.hFile);
-        }
-        if (out.empty()) {
-            out = L"Unknown";
-        }
-        m_client->writeDllLoad(child, out, true);
+        const auto &module = child->addModule(debugEvent.u.LoadDll);
+        m_client->writeDllLoad(child, module ? module->name() : L"Unknown", true);
     }
-
 
     inline void dllUnloadEvent(DEBUG_EVENT &debugEvent)
     {
         VSDChildProcess *child = m_children.at(debugEvent.dwProcessId);
-        const UNLOAD_DLL_DEBUG_INFO &DebugDll = debugEvent.u.UnloadDll;
-        std::wstring out = L"Unknown";
-        const auto dllName = child->m_dllNames.find(DebugDll.lpBaseOfDll);
-        if (dllName != child->m_dllNames.cend()) {
-            out = dllName->second;
-        }
-        m_client->writeDllLoad(child, out, false);
+        const auto module = child->getModul(static_cast<HMODULE>(debugEvent.u.UnloadDll.lpBaseOfDll));
+        m_client->writeDllLoad(child, module ? module->name() : L"Unknown", false);
     }
 
     inline DWORD readException(DEBUG_EVENT &debugEvent)
@@ -280,7 +229,7 @@ public:
         if (debugEvent.u.Exception.dwFirstChance == 0) {
             std::wstringstream out;
             out << L"Unhandled Exception: ";
-            out << getExceptionInfo(child->handle(), debugEvent.u.Exception.ExceptionRecord);
+            out << getExceptionInfo(child, debugEvent.u.Exception.ExceptionRecord);
             child->processDied(debugEvent.u.ExitProcess.dwExitCode, out.str());
             // dont delete child !!
         }
