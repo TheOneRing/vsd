@@ -72,7 +72,7 @@ public:
         return m_handle;
     }
 
-    inline const std::wstring &path() const
+    inline const std::filesystem::path &path() const
     {
         return m_path;
     }
@@ -115,11 +115,10 @@ public:
 
 private:
 #pragma warning(disable : 4251)
-
     VSDClient *m_client;
     unsigned long m_id;
     HANDLE m_handle;
-    std::wstring m_path;
+    std::filesystem::path m_path;
     std::wstring m_name;
     std::wstring m_error;
     std::chrono::high_resolution_clock::time_point m_startTime;

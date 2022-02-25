@@ -431,14 +431,14 @@ public:
 
     inline void processStarted(const VSDChildProcess *process)
     {
-        m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY) << L"Process Created: " << process->path() << L" (" << process->id() << L")\n";
+        m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY) << L"Process Created: " << process->path().wstring() << L" (" << process->id() << L")\n";
     }
 
     inline void processStopped(const VSDChildProcess *process)
     {
         m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY)
             << L"Process Stopped: "
-            << process->path()
+            << process->path().wstring()
             << L" (" << process->id() << L")";
         if (!process->error().empty()) {
             m_out << L" Error: "
