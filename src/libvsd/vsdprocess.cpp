@@ -50,8 +50,8 @@ std::wstring formatException(int exceptionCode)
 {
 #define exeptionString(x) \
     case x:               \
-        return std::wstring(L#x);
-    switch (exceptionCode) {
+        return std::wstring(L"" #x);
+    switch (static_cast<DWORD>(exceptionCode)) {
         exeptionString(EXCEPTION_ACCESS_VIOLATION);
         exeptionString(EXCEPTION_ARRAY_BOUNDS_EXCEEDED);
         exeptionString(EXCEPTION_BREAKPOINT);
