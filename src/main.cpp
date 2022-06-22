@@ -382,21 +382,6 @@ public:
         m_out.setColor(0) << L"\n";
     }
 
-    std::wstring string_to_hex(const std::wstring &input)
-    {
-        static const wchar_t *const lut = L"0123456789ABCDEF";
-        size_t len = input.length();
-
-        std::wstring output;
-        output.reserve(2 * len);
-        for (size_t i = 0; i < len; ++i) {
-            const wchar_t c = input[i];
-            output.push_back(lut[c >> 4]);
-            output.push_back(lut[c & 15]);
-        }
-        return output;
-    }
-
     inline std::wstring getTimestamp(const std::chrono::high_resolution_clock::duration &time)
     {
         std::wstringstream out;
@@ -445,7 +430,7 @@ public:
                   << process->error();
         }
         std::wstringstream exitCode;
-        exitCode << L"0x" << std::hex << process->exitCode();
+        exitCode << std::hex << std::showbase << process->exitCode() << std::dec;
         m_out << L" With exit Code: "
               << exitCode.str()
               << L" After: "
