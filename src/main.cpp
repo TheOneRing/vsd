@@ -416,7 +416,8 @@ public:
 
     inline void processStarted(const VSDChildProcess *process)
     {
-        m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY) << L"Process Created: " << process->path().wstring() << L" (" << process->id() << L")\n";
+        m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY)
+            << L"Process Created: " << process->path().wstring() << L" [" << process->arguments() << L"] (" << process->id() << L")\n";
     }
 
     inline void processStopped(const VSDChildProcess *process)

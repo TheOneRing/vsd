@@ -88,8 +88,9 @@ std::wstring getExceptionInfo(VSDChildProcess *process, const EXCEPTION_RECORD &
         return module->error();
     }
     std::wstringstream oss;
-    oss << formatException(rec.ExceptionCode) << " at address " << std::hex << std::showbase << reinterpret_cast<intptr_t>(rec.ExceptionAddress)
-        << " in " << module->name() << " loaded at base address " << reinterpret_cast<intptr_t>(info->lpBaseOfDll) << "\n" << std::dec;
+    oss << formatException(rec.ExceptionCode) << " at address " << std::hex << std::showbase << reinterpret_cast<intptr_t>(rec.ExceptionAddress) << " in "
+        << module->name() << " loaded at base address " << reinterpret_cast<intptr_t>(info->lpBaseOfDll) << "\n"
+        << std::dec;
 
     if (rec.ExceptionCode == EXCEPTION_ACCESS_VIOLATION || rec.ExceptionCode == EXCEPTION_IN_PAGE_ERROR) {
         oss << "Invalid operation: ";

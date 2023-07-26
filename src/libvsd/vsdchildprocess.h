@@ -82,6 +82,8 @@ public:
         return m_name;
     }
 
+    inline const std::wstring &arguments() const { return m_args; }
+
     inline const std::wstring &error() const
     {
         return m_error;
@@ -120,6 +122,7 @@ private:
     HANDLE m_handle;
     std::filesystem::path m_path;
     std::wstring m_name;
+    std::wstring m_args;
     std::wstring m_error;
     std::chrono::high_resolution_clock::time_point m_startTime;
     std::chrono::high_resolution_clock::duration m_duration;

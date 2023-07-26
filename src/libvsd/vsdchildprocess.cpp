@@ -22,14 +22,53 @@
 #include "vsdprocess.h"
 #include "utils.h"
 
-#include <windows.h>
+#include <shellapi.h>
 #include <winbase.h>
+#include <windows.h>
+#include <winternl.h>
 
 #include <iostream>
 #include <string>
 #include <sstream>
 
 using namespace libvsd;
+
+namespace {
+
+std::wstring getProcessArgs(HANDLE processHandle, VSDClient *client)
+{
+    const auto logError = [client](bool b, const std::wstring &call) {
+        if (!b) {
+            client->writeErr(L"getProcessArgs: '" + call + L"' failed! " + Utils::formatError(GetLastError()));
+        }
+        return b;
+    };
+
+    PROCESS_BASIC_INFORMATION pinfo{};
+    NTSTATUS status = NtQueryInformationProcess(processHandle, ProcessBasicInformation, &pinfo, sizeof(PROCESS_BASIC_INFORMATION), nullptr);
+
+    if (NT_SUCCESS(status)) {
+        SIZE_T read{};
+        PEB peb{};
+        if (logError(ReadProcessMemory(processHandle, pinfo.PebBaseAddress, &peb, sizeof(PEB), &read), L"Read PEB")) {
+            RTL_USER_PROCESS_PARAMETERS parameters = {};
+
+            if (logError(ReadProcessMemory(processHandle, peb.ProcessParameters, &parameters, sizeof(RTL_USER_PROCESS_PARAMETERS), &read),
+                    L"Read ProcessParameters")) {
+                if (parameters.CommandLine.Length) {
+                    std::wstring commandLine(parameters.CommandLine.Length, '\0');
+                    if (logError(ReadProcessMemory(processHandle, parameters.CommandLine.Buffer, commandLine.data(), parameters.CommandLine.Length, &read),
+                            L"Read CommandLine")) {
+                        commandLine.resize(read);
+                        return commandLine;
+                    }
+                }
+            }
+        }
+    }
+    return {};
+}
+}
 Module::Module(const LOAD_DLL_DEBUG_INFO &info, VSDChildProcess *parent)
     : m_name(Utils::getFinalPathNameByHandle(info.hFile))
     , m_parent(parent)
@@ -53,6 +92,7 @@ VSDChildProcess::VSDChildProcess(VSDClient *client, const unsigned long id, cons
     , m_handle(OpenProcess(PROCESS_ALL_ACCESS, FALSE, id))
     , m_path(Utils::getFinalPathNameByHandle(fileHandle))
     , m_name(m_path.stem())
+    , m_args(getProcessArgs(m_handle, client))
     , m_startTime(std::chrono::high_resolution_clock::now())
     , m_exitCode(STILL_ACTIVE)
 {
