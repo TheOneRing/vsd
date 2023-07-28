@@ -68,9 +68,11 @@ std::filesystem::path configPath()
 class ColorStream
 {
 public:
+    enum class Color { None, Red, Green, Blue };
+
     ColorStream() = default;
     virtual ~ColorStream() {};
-    virtual ColorStream &setColor(WORD color) = 0;
+    virtual ColorStream &setColor(Color color) = 0;
     virtual ColorStream &operator<<(const std::wstring_view &) = 0;
 
     ColorStream &operator<<(int i)
@@ -89,7 +91,8 @@ public:
         }
         m_streams.clear();
     }
-    ColorStream &setColor(WORD color) override
+
+    ColorStream &setColor(ColorGroupoStream::Color color) override
     {
         for (const auto str : m_streams) {
             str->setColor(color);
@@ -120,10 +123,32 @@ public:
     ColorOutStream(HANDLE hout)
         : m_hout(hout)
     {
+        GetConsoleScreenBufferInfo(m_hout, &m_consoleSettings);
     }
-    virtual ColorStream &setColor(WORD color) override
+
+    ~ColorOutStream()
     {
-        SetConsoleTextAttribute(m_hout, color);
+        SetConsoleTextAttribute(m_hout, m_consoleSettings.wAttributes);
+        CloseHandle(m_hout);
+    }
+    virtual ColorStream &setColor(ColorGroupoStream::Color color) override
+    {
+        int colorAttribute = 0;
+        switch (color) {
+        case ColorStream::Color::None:
+            colorAttribute = m_consoleSettings.wAttributes;
+            break;
+        case ColorStream::Color::Red:
+            colorAttribute = FOREGROUND_RED | FOREGROUND_INTENSITY;
+            break;
+        case ColorStream::Color::Blue:
+            colorAttribute = FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+            break;
+        case ColorStream::Color::Green:
+            colorAttribute = FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+            break;
+        }
+        SetConsoleTextAttribute(m_hout, colorAttribute);
         return *this;
     };
 
@@ -135,6 +160,7 @@ public:
 
 private:
     HANDLE m_hout;
+    CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
 };
 
 
@@ -157,10 +183,7 @@ public:
         m_out.close();
     }
 
-    virtual ColorStream &setColor(WORD) override
-    {
-        return *this;
-    };
+    virtual ColorStream &setColor(ColorStream::Color) override { return *this; };
 
     ColorStream &operator<<(const std::wstring_view &x) override
     {
@@ -192,20 +215,17 @@ public:
         m_out << "</body>\n\n</html>\n";
     }
 
-    virtual ColorStream &setColor(WORD color) override
+    virtual ColorStream &setColor(ColorStream::Color color) override
     {
         m_out << "</p><p style=\"color:";
         switch (color) {
-        case FOREGROUND_BLUE:
-        case FOREGROUND_BLUE | FOREGROUND_INTENSITY:
+        case ColorStream::Color::Blue:
             m_out << "blue";
             break;
-        case FOREGROUND_GREEN:
-        case FOREGROUND_GREEN | FOREGROUND_INTENSITY:
+        case ColorStream::Color::Green:
             m_out << "green";
             break;
-        case FOREGROUND_RED:
-        case FOREGROUND_RED | FOREGROUND_INTENSITY:
+        case ColorStream::Color::Red:
             m_out << "red";
             break;
         default:
@@ -316,9 +336,8 @@ public:
         }
 
         if (!m_noOutput) {
-            m_hout = GetStdHandle(STD_OUTPUT_HANDLE);
-            GetConsoleScreenBufferInfo(m_hout, &m_consoleSettings);
-            m_out.addStream(new ColorOutStream(m_hout));
+            auto hout = GetStdHandle(STD_OUTPUT_HANDLE);
+            m_out.addStream(new ColorOutStream(hout));
         }
 
         if (!logFile.empty()) {
@@ -328,25 +347,20 @@ public:
                 m_out.addStream(new SimpleFileStream(logFile));
             }
         }
-        m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY) << program << L" " << arguments.str() << L"\n";
+        m_out.setColor(ColorStream::Color::Blue) << program << L" " << arguments.str() << L"\n";
 
         m_process = new VSDProcess(program, arguments.str(), this);
         m_process->debugDllLoading(debug_dll);
         m_process->debugSubProcess(withSubProcess);
     }
 
-    ~VSDImp()
-    {
-        delete m_process;
-        SetConsoleTextAttribute(m_hout, m_consoleSettings.wAttributes);
-        CloseHandle(m_hout);
-    }
+    ~VSDImp() { delete m_process; }
 
 
     inline void run()
     {
         m_exitCode = m_process->run(m_channels);
-        m_out.setColor(0) << L"\n";
+        writeStdout(L"\n");
     }
 
     inline std::wstring getTimestamp(const std::chrono::high_resolution_clock::duration &time)
@@ -359,40 +373,32 @@ public:
         return out.str();
     }
 
-    inline void writeStdout(const std::wstring &data)
-    {
-        m_out.setColor(m_consoleSettings.wAttributes) << data;
-    }
+    inline void writeStdout(const std::wstring &data) { m_out.setColor(ColorStream::Color::None) << data; }
 
-    inline void writeErr(const std::wstring &data)
-    {
-        m_out.setColor(FOREGROUND_RED | FOREGROUND_INTENSITY) << data;
-    }
+    inline void writeErr(const std::wstring &data) { m_out.setColor(ColorStream::Color::Red) << data; }
 
     inline void writeDebug(const VSDChildProcess *process, const std::wstring &data)
     {
-        m_out.setColor(FOREGROUND_GREEN | FOREGROUND_INTENSITY) << process->name() << L"(" << process->id() << L"): " << rtrim(data) << L"\n";
+        m_out.setColor(ColorStream::Color::Green) << process->name() << L"(" << process->id() << L"): " << rtrim(data) << L"\n";
     }
 
     void writeDllLoad(const VSDChildProcess *process, const std::wstring &data, bool loading)
     {
         if (m_logDll) {
-            m_out.setColor(FOREGROUND_GREEN) << process->name() << L"(" << process->id() << L"): " << (loading ? L"Loading: " : L"Unloading: ") << data << L"\n";
+            m_out.setColor(ColorStream::Color::Green) << process->name() << L"(" << process->id() << L"): " << (loading ? L"Loading: " : L"Unloading: ") << data
+                                                      << L"\n";
         }
     }
 
     inline void processStarted(const VSDChildProcess *process)
     {
-        m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY)
-            << L"Process Created: " << process->path().wstring() << L" [" << process->arguments() << L"] (" << process->id() << L")\n";
+        m_out.setColor(ColorStream::Color::Blue) << L"Process Created: " << process->path().wstring() << L" [" << process->arguments() << L"] ("
+                                                 << process->id() << L")\n";
     }
 
     inline void processStopped(const VSDChildProcess *process)
     {
-        m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY)
-            << L"Process Stopped: "
-            << process->path().wstring()
-            << L" (" << process->id() << L")";
+        m_out.setColor(ColorStream::Color::Blue) << L"Process Stopped: " << process->path().wstring() << L" (" << process->id() << L")";
         if (!process->error().empty()) {
             m_out << L" Error: "
                   << process->error();
@@ -416,8 +422,6 @@ public:
 private:
     ColorGroupoStream m_out;
     VSDProcess *m_process;
-    HANDLE m_hout = INVALID_HANDLE_VALUE;
-    CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
     bool m_noOutput = false;
     bool m_logDll = false;
     VSDProcess::ProcessChannelMode m_channels = VSDProcess::ProcessChannelMode::MergedChannels;
