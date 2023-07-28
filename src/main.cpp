@@ -236,7 +236,7 @@ void printHelp()
                << L"--vsd-all\t\t\t debug also all processes created by TARGET_APPLICATION" << std::endl
                << L"--vsd-debug-dll\t\t\t Debugg dll loading" << std::endl
                << L"--vsd-log-dll\t\t\t Log dll loading" << std::endl
-               << L"--vsd-no-console\t\tdon't log to console" << std::endl
+               << L"--vsd-no-console\t\t don't log to console" << std::endl
                << L"--help \t\t\t\t print this help" << std::endl
                << L"--version\t\t\t print version and copyright information" << std::endl;
     exit(0);
