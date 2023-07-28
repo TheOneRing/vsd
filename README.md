@@ -9,17 +9,15 @@ It aims to be fast and simple.
 ```
 Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]
 Options:
---vsd-seperate-error             seperate stderr and stdout to identify sterr messages
---vsd-log logFile                write the logFile in colored html
---vsd-logplain logFile           write a log to logFile
---vsd-all                        debug also all processes created by TARGET_APPLICATION
+--vsd-separate-error             Separate stderr and stdout to identify stderr messages
+--vsd-log logFile                Write the logFile in colored html
+--vsd-log-plain logFile          Write a log plaintext to logFile
+--vsd-all                        Debug also all processes created by TARGET_APPLICATION
 --vsd-debug-dll                  Debugg dll loading
 --vsd-log-dll                    Log dll loading
---vsd-nc                         monochrome output
---vsd-no-console                 don't log to console
---vsd-benchmark #iterations      VSD won't print the output, a slow terminal would fake the outcome
---help                           print this help
---version                        print version and copyright information
+--vsd-no-console                 Don't log to console
+--help                           Print this help
+--version                        Print version and copyright information
 ```
 
 ### Debug dll loading
