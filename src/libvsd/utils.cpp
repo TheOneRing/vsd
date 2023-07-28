@@ -68,7 +68,7 @@ std::wstring getModuleName(HANDLE process, HMODULE handle)
     size_t size = 0;
     do {
         out.resize(out.size() + 1024);
-        size = GetModuleFileNameExW(process, handle, out.data(), out.size());
+        size = GetModuleFileNameExW(process, handle, out.data(), static_cast<DWORD>(out.size()));
     } while (GetLastError() == ERROR_INSUFFICIENT_BUFFER);
 
     if (!size) {
