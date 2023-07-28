@@ -408,7 +408,6 @@ public:
 
     inline void stop()
     {
-        m_run = false;
         m_process->stop();
     }
 
@@ -420,7 +419,6 @@ private:
     HANDLE m_hout = INVALID_HANDLE_VALUE;
     CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
     bool m_noOutput = false;
-    bool m_run = true;
     bool m_logDll = false;
     VSDProcess::ProcessChannelMode m_channels = VSDProcess::ProcessChannelMode::MergedChannels;
 };
