@@ -236,9 +236,7 @@ void printHelp()
                << L"--vsd-all\t\t\t debug also all processes created by TARGET_APPLICATION" << std::endl
                << L"--vsd-debug-dll\t\t\t Debugg dll loading" << std::endl
                << L"--vsd-log-dll\t\t\t Log dll loading" << std::endl
-               << L"--vsd-nc \t\t\t monochrome output" << std::endl
                << L"--vsd-no-console\t\tdon't log to console" << std::endl
-               << L"--vsd-benchmark #iterations \t VSD won't print the output, a slow terminal would fake the outcome" << std::endl
                << L"--help \t\t\t\t print this help" << std::endl
                << L"--version\t\t\t print version and copyright information" << std::endl;
     exit(0);
@@ -304,12 +302,8 @@ public:
                 }
             } else if (arg == L"--vsd-all") {
                 withSubProcess = true;
-            } else if (arg == L"--vsd-nc") {
-                m_colored = false;
             } else if (arg == L"--vsd-no-console") {
                 m_noOutput = true;
-            } else if (arg == L"--vsd-benchmark") {
-                i = initBenchmark(in, i, len);
             } else if (i == 1) {
                 if (arg == L"--help") {
                     printHelp();
@@ -348,37 +342,10 @@ public:
         CloseHandle(m_hout);
     }
 
-    inline int initBenchmark(wchar_t *in[], int pos, int len)
-    {
-        m_noOutput = true;
-        if (pos + 1 < len) {
-            m_iterations = _wtoi(in[++pos]);
-            if (m_iterations == 0) {
-                printHelp();
-            }
-        } else {
-            printHelp();
-        }
-        return pos;
-    }
-
 
     inline void run()
     {
-        std::chrono::high_resolution_clock::duration time(0);
-        for (int i = 1; m_run && i <= m_iterations; ++i) {
-            m_exitCode = m_process->run(m_channels);
-            time += m_process->time();
-            if (m_iterations > 1) {
-                m_out.setColor(FOREGROUND_BLUE | FOREGROUND_INTENSITY)
-                    << L"\rBenchmark iteration: "
-                    << i
-                    << L", mean execution time: "
-                    << getTimestamp(time / i)
-                    << L" total execution time "
-                    << getTimestamp(time);
-            }
-        }
+        m_exitCode = m_process->run(m_channels);
         m_out.setColor(0) << L"\n";
     }
 
@@ -452,9 +419,7 @@ private:
     VSDProcess *m_process;
     HANDLE m_hout = INVALID_HANDLE_VALUE;
     CONSOLE_SCREEN_BUFFER_INFO m_consoleSettings;
-    bool m_colored = true;
     bool m_noOutput = false;
-    int m_iterations = 1;
     bool m_run = true;
     bool m_logDll = false;
     VSDProcess::ProcessChannelMode m_channels = VSDProcess::ProcessChannelMode::MergedChannels;
