@@ -230,23 +230,23 @@ void printHelp()
 {
     std::wcout << L"Usage: vsd TARGET_APPLICATION [ARGUMENTS] [OPTIONS]" << std::endl
                << L"Options:" << std::endl
-               << L"--vsd-seperate-error \t\t seperate stderr and stdout to identify sterr messages" << std::endl
-               << L"--vsd-log logFile \t\t write the logFile in colored html" << std::endl
-               << L"--vsd-logplain logFile \t\t write a log to logFile" << std::endl
-               << L"--vsd-all\t\t\t debug also all processes created by TARGET_APPLICATION" << std::endl
+               << L"--vsd-separate-error \t\t Separate stderr and stdout to identify stderr messages" << std::endl
+               << L"--vsd-log logFile \t\t Write the logFile in colored html" << std::endl
+               << L"--vsd-log-plain logFile \t Write a log plaintext to logFile" << std::endl
+               << L"--vsd-all\t\t\t Debug also all processes created by TARGET_APPLICATION" << std::endl
                << L"--vsd-debug-dll\t\t\t Debugg dll loading" << std::endl
                << L"--vsd-log-dll\t\t\t Log dll loading" << std::endl
-               << L"--vsd-no-console\t\t don't log to console" << std::endl
-               << L"--help \t\t\t\t print this help" << std::endl
-               << L"--version\t\t\t print version and copyright information" << std::endl;
+               << L"--vsd-no-console\t\t Don't log to console" << std::endl
+               << L"--help \t\t\t\t Print this help" << std::endl
+               << L"--version\t\t\t Print version and copyright information" << std::endl;
     exit(0);
 }
 
 void printVersion()
 {
-    std::wcout << L"VSD version 0.8.0" << std::endl
+    std::wcout << L"VSD version 0.9.0" << std::endl
                << std::endl
-               << L"Copyright (C) 2012-2021  Hannah von Reth <vonreth@kde.org>" << std::endl
+               << L"Copyright (C) 2012-2023  Hannah von Reth <vonreth@kde.org>" << std::endl
                << std::endl
                << L"VSD is free software: you can redistribute it and/or modify" << std::endl
                << L"it under the terms of the GNU Lesser General Public License as published by" << std::endl
@@ -280,7 +280,7 @@ public:
 
         for (int i = 1; i < len; ++i) {
             std::wstring arg(in[i]);
-            if (arg == L"--vsd-seperate-error") {
+            if (arg == L"--vsd-separate-error") {
                 m_channels = VSDProcess::ProcessChannelMode::SeperateChannels;
             } else if (arg == L"--vsd-debug-dll") {
                 debug_dll = true;
@@ -293,7 +293,7 @@ public:
                 } else {
                     printHelp();
                 }
-            } else if (arg == L"--vsd-logplain") {
+            } else if (arg == L"--vsd-log-plain") {
                 htmlLog = false;
                 if (i + 1 < len) {
                     logFile = in[++i];
