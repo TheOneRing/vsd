@@ -22,8 +22,10 @@ else()
     endif(MINGW)
 endif()
 
-# treat unhandled switch cases as error
-add_compile_options(/we4062)
+if(MSVC)
+    # treat unhandled switch cases as error
+    add_compile_options(/we4062)
+endif ()
 
 option(STATIC_VSD "Build libvsd static" OFF)
 
