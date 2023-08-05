@@ -1,8 +1,10 @@
 # VSD
+The original motivation for `VSD` was a simple tooll to read `OutputDebugString` or just stdout, stderr for Windows gui applications (which by default don't print to the terminal.
+Using `GDB` was slowing down the execution too much and [DebugView](https://learn.microsoft.com/en-us/sysinternals/downloads/debugview) can be hard to read if too many processes are writing messages.
 
-Prints debugging messages of applications to console and supports logging of their output. VSD also works for Gui applications, it also attaches itself as a debugger which makes it possible to print the windows debug messages, which is otherwise only possible using GDB or DebugView. But GDB makes execution slow, and DebugView prints the debug output of all running applications. The possibility to attach to all sub-processes makes it interesting for debugging background processes started by the application.
+Over time more features where added, the ability to attach to subprocesses and several possebilities to debug dll loading, which can be pretty hard for dnamically loaded libaries.
 
-It aims to be fast and simple.
+V(ery) S(imple) D(debugger) is not really a debugger but can help in times of need.
 
 ### Help
 
