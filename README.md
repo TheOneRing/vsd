@@ -6,7 +6,7 @@ Over time more features where added, the ability to attach to subprocesses and s
 
 V(ery) S(imple) D(debugger) is not really a debugger but can help in times of need.
 ![vhs recording of vsd.gif](doc/vsd.gif)
-[Html log output for running kate](doc/kate.html)
+[Html log output for running kate](https://htmlpreview.github.io/?https://raw.githubusercontent.com/TheOneRing/vsd/master/doc/kate.html)
 
 ### Help
 
