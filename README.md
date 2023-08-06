@@ -5,6 +5,7 @@ Using `GDB` was slowing down the execution too much and [DebugView](https://lear
 Over time more features where added, the ability to attach to subprocesses and several possebilities to debug dll loading, which can be pretty hard for dnamically loaded libaries.
 
 V(ery) S(imple) D(debugger) is not really a debugger but can help in times of need.
+![vhs recording of vsd.gif](doc/vsd.gif)
 
 ### Help
 
