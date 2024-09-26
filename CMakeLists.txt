@@ -27,7 +27,7 @@ if(MSVC)
     add_compile_options(/we4062)
 endif ()
 
-option(STATIC_VSD "Build libvsd static" OFF)
+option(STATIC_VSD "Build libvsd static" ON)
 
 if(STATIC_VSD)
     add_definitions(-DLIBVSD_STATIC)
