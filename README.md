@@ -1,3 +1,4 @@
+[![CMake](https://github.com/TheOneRing/vsd/actions/workflows/cmake-single-platform.yml/badge.svg)](https://github.com/TheOneRing/vsd/actions/workflows/cmake-single-platform.yml)
 # VSD
 The original motivation for `VSD` was a simple tooll to read `OutputDebugString` or just stdout, stderr for Windows gui applications (which by default don't print to the terminal.
 Using `GDB` was slowing down the execution too much and [DebugView](https://learn.microsoft.com/en-us/sysinternals/downloads/debugview) can be hard to read if too many processes are writing messages.
